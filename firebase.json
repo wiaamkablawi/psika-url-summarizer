@@ -16,6 +16,10 @@
       {
         "source": "/createSummaryFromUrl",
         "function": "createSummaryFromUrl"
+      },
+      {
+        "source": "/searchSupremeLastWeekDecisions",
+        "function": "searchSupremeLastWeekDecisions"
       }
     ]
   }
