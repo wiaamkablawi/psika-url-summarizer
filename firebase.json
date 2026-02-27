@@ -1,0 +1,26 @@
+{
+  "functions": {
+    "source": "functions"
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/createSummaryFromUrl",
+        "function": "createSummaryFromUrl"
+      },
+      {
+        "source": "/searchSupremeLastWeekDecisions",
+        "function": "searchSupremeLastWeekDecisions"
+      }
+    ]
+  }
+}

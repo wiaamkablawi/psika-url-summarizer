@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>בדיקות אינג'סט URL</title>
+    <style>
+      body { font-family: Arial, sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
+      form, .preset { display: grid; gap: 0.75rem; margin-bottom: 1rem; }
+      input, button { padding: 0.6rem; font-size: 1rem; }
+      pre { background: #f4f4f4; padding: 1rem; overflow-x: auto; }
+      .status { font-weight: bold; }
+    </style>
+  </head>
+  <body>
+    <h1>בדיקת createSummaryFromUrl</h1>
+    <form id="summary-form">
+      <label for="url">URL</label>
+      <input id="url" name="url" type="url" placeholder="https://example.com" required />
+      <button type="submit">שלח URL</button>
+    </form>
+
+    <div class="preset">
+      <h2>חיפוש אוטומטי בעליון</h2>
+      <button id="supreme-btn" type="button">שבוע אחרון + החלטות מעל 2 עמודים</button>
+    </div>
+
+    <p class="status" id="status">מוכן</p>
+    <pre id="response">{}</pre>
+
+    <script>
+      const form = document.getElementById("summary-form");
+      const statusEl = document.getElementById("status");
+      const responseEl = document.getElementById("response");
+      const supremeBtn = document.getElementById("supreme-btn");
+
+      async function postJson(path, payload) {
+        const res = await fetch(path, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(payload || {}),
+        });
+        const data = await res.json();
+        statusEl.textContent = `HTTP ${res.status} - ${data.ok ? "success" : "error"}`;
+        responseEl.textContent = JSON.stringify(data, null, 2);
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        statusEl.textContent = "שולח URL...";
+        responseEl.textContent = "{}";
+        const url = document.getElementById("url").value;
+        try {
+          await postJson("/createSummaryFromUrl", {url});
+        } catch (error) {
+          statusEl.textContent = "Request failed";
+          responseEl.textContent = JSON.stringify({ok: false, error: error.message}, null, 2);
+        }
+      });
+
+      supremeBtn.addEventListener("click", async () => {
+        statusEl.textContent = "מריץ חיפוש בעליון...";
+        responseEl.textContent = "{}";
+        try {
+          await postJson("/searchSupremeLastWeekDecisions", {});
+        } catch (error) {
+          statusEl.textContent = "Request failed";
+          responseEl.textContent = JSON.stringify({ok: false, error: error.message}, null, 2);
+        }
+      });
+    </script>
+  </body>
+</html>
