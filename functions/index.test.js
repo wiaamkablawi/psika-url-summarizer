@@ -24,6 +24,31 @@ function createResponse({ok = true, status = 200, contentType = "text/plain", ch
   };
 }
 
+function createMockRes() {
+  const headers = {};
+  return {
+    headers,
+    statusCode: null,
+    body: undefined,
+    set(name, value) {
+      headers[name] = value;
+      return this;
+    },
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    json(payload) {
+      this.body = payload;
+      return this;
+    },
+    send(payload) {
+      this.body = payload;
+      return this;
+    },
+  };
+}
+
 test("isBlockedHostname blocks localhost/private networks", () => {
   assert.equal(__test.isBlockedHostname("localhost"), true);
   assert.equal(__test.isBlockedHostname("192.168.1.2"), true);
@@ -78,4 +103,77 @@ test("fetchWithTimeout maps AbortError to 504", async () => {
   } finally {
     global.fetch = originalFetch;
   }
+});
+
+test("handleRequest returns 204 for OPTIONS and sets CORS headers", async () => {
+  const req = {method: "OPTIONS"};
+  const res = createMockRes();
+
+  await __test.handleRequest(req, res, async () => ({}), () => ({}));
+
+  assert.equal(res.statusCode, 204);
+  assert.equal(res.body, "");
+  assert.equal(res.headers["Access-Control-Allow-Origin"], "*");
+});
+
+test("handleRequest returns 405 for non-POST", async () => {
+  const req = {method: "GET"};
+  const res = createMockRes();
+
+  await __test.handleRequest(req, res, async () => ({}), () => ({}));
+
+  assert.equal(res.statusCode, 405);
+  assert.equal(res.body.ok, false);
+});
+
+test("handleRequest returns success payload and writes done document", async () => {
+  const req = {method: "POST", body: {url: "https://example.com"}};
+  const res = createMockRes();
+  const docs = [];
+
+  await __test.handleRequest(
+    req,
+    res,
+    async () => ({contentType: "text/plain", text: "abc"}),
+    () => ({type: "url", url: "https://example.com"}),
+    {
+      writeSummaryDoc: async (doc) => {
+        docs.push(doc);
+        return "doc-123";
+      },
+    },
+  );
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.ok, true);
+  assert.equal(res.body.id, "doc-123");
+  assert.equal(docs[0].status, "done");
+});
+
+test("handleRequest writes failed document and returns error payload", async () => {
+  const req = {method: "POST", body: {url: "https://bad.example"}};
+  const res = createMockRes();
+  const writes = [];
+
+  await __test.handleRequest(
+    req,
+    res,
+    async () => {
+      const err = new Error("boom");
+      err.status = 502;
+      throw err;
+    },
+    () => ({type: "url", url: "https://bad.example"}),
+    {
+      writeSummaryDoc: async (doc) => {
+        writes.push(doc);
+        return "failed-1";
+      },
+    },
+  );
+
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.ok, false);
+  assert.equal(res.body.id, "failed-1");
+  assert.equal(writes[0].status, "failed");
 });
