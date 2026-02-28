@@ -10,10 +10,12 @@ function createSupremeSearchRunner(core) {
         contentType: "text/html",
         text: "Synthetic supreme search result for emulator integration test",
         meta: {
-          preset: "last_week_decisions_over_2_pages",
+          preset: "last_week_material_only_criminal_over_2_pages",
           dateFrom: "01/01/2025",
           dateTo: "08/01/2025",
-          minPages: 3,
+          minPages: 2,
+          materiality: "מהותיות בלבד",
+          section: "פלילי",
         },
       };
     }
