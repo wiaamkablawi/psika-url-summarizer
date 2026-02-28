@@ -37,3 +37,18 @@ exports.searchSupremeLastWeekDecisions = functions.https.onRequest((req, res) =>
     {writeSummaryDoc},
   ),
 );
+
+if (process.env.NODE_ENV === "test") {
+  exports.__test = {
+    MAX_RESPONSE_BYTES,
+    createHttpError,
+    isBlockedHostname,
+    extractTextFromHtml,
+    readResponseBodyWithLimit,
+    fetchWithTimeout,
+    runUrlIngest,
+    extractHiddenFields,
+    runSupremePresetSearch,
+    handleRequest,
+  };
+}
