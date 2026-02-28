@@ -62,6 +62,18 @@ firebase emulators:start --only firestore,functions
 
 > הערה: גם כשהחוקים חוסמים גישת לקוח, Cloud Functions שמריצות Admin SDK עדיין יכולות לכתוב ל־Firestore.
 
+### התנסות מלאה במערכת (MVP local)
+
+```bash
+firebase emulators:start --only hosting,functions,firestore
+```
+
+לאחר שהאמולטורים עולים:
+
+1. לפתוח דפדפן ב־`http://127.0.0.1:5000`.
+2. לשלוח URL דרך הטופס (`createSummaryFromUrl`) או להריץ חיפוש Preset.
+3. לראות תוצאה מיידית ב־UI וגם במסמכי `summaries` באמולטור Firestore.
+
 ### הרצת בדיקות
 
 ```bash

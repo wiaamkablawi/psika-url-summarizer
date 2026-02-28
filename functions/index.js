@@ -19,7 +19,13 @@ exports.createSummaryFromUrl = functions.https.onRequest((req, res) =>
     res,
     async (body) => core.runUrlIngest(typeof body.url === "string" ? body.url.trim() : ""),
     (result) => ({type: "url", url: result.normalizedUrl}),
-    {writeSummaryDoc},
+    {
+      writeSummaryDoc,
+      failureSourceBuilder: (request) => ({
+        type: "url",
+        url: typeof request?.body?.url === "string" ? request.body.url.trim() : null,
+      }),
+    },
   ),
 );
 
@@ -34,7 +40,15 @@ exports.searchSupremeLastWeekDecisions = functions.https.onRequest((req, res) =>
       url: result.sourceUrl,
       preset: result.meta.preset,
     }),
-    {writeSummaryDoc},
+    {
+      writeSummaryDoc,
+      failureSourceBuilder: () => ({
+        type: "preset",
+        provider: "supreme.court.gov.il",
+        url: core.SUPREME_SEARCH_URL,
+        preset: "last_week_decisions_over_2_pages",
+      }),
+    },
   ),
 );
 
