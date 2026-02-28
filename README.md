@@ -5,45 +5,56 @@
 1. לקלוט URL חיצוני, למשוך תוכן בצורה בטוחה יחסית, לנקות אותו לטקסט ולשמור ב־Firestore.
 2. להריץ חיפוש Preset באתר בית המשפט העליון (שבוע אחרון + החלטות) ולשמור גם את התוצאה.
 
-## מה כבר קיים במערכת
+## MVP Done Checklist (Production-Ready בסיסי)
 
-### Backend (Cloud Functions)
+### ✅ מה הושלם
 
-- `createSummaryFromUrl`:
-  - מקבל `POST` עם שדה `url`.
-  - מבצע ולידציה לפרוטוקול (`http/https`) ואורך URL.
-  - חוסם hosts פנימיים/לוקאליים בסיסיים (הגנת SSRF בסיסית).
-  - מושך תוכן עם timeout ומגבלת גודל תגובה.
-  - תומך ב־`text/html` ו־`text/plain`, מחלץ טקסט ושומר מסמך ב־`summaries`.
+- [x] `createSummaryFromUrl` ו־`searchSupremeLastWeekDecisions` שומרים `done/failed` עם `durationMs` עקבי.
+- [x] `searchSupremeLastWeekDecisions` מכוסה ב־integration tests (מסלול הצלחה + מסלול כשל) כולל assertions על `source/status/error/durationMs`.
+- [x] `listLatestSummaries` הוקשח:
+  - ולידציית `limit` קפדנית (1..50 בלבד).
+  - שגיאות query מול Firestore ממופות ל־`FirestoreQueryError` ברור.
+- [x] `functions/index.js` פוצל למודולים פנימיים (`writers/queries/services`) בלי לשבור API חיצוני.
+- [x] לוגים מובנים אחידים לכל endpoints עם השדות: `endpoint`, `status`, `durationMs`, `errorType`.
+- [x] UI מקומי שופר:
+  - אינדיקציית טעינה,
+  - שגיאות ידידותיות,
+  - רענון אוטומטי לרשימת הסיכומים אחרי ingest/search.
 
-- `searchSupremeLastWeekDecisions`:
-  - טוען את עמוד החיפוש של העליון, אוסף hidden fields, ושולח בקשת חיפוש עם preset.
-  - מחלץ טקסט מהתוצאות ושומר מסמך ב־`summaries`.
+### ✅ קריטריוני Done
 
-- `listLatestSummaries`:
-  - מקבל `GET` עם `limit` אופציונלי.
-  - מחזיר את הסיכומים האחרונים מ־Firestore (כולל `status`, `source`, `durationMs`, ו־`fetchedAt`).
+MVP נחשב Done כאשר:
 
-### Frontend לבדיקה ידנית
+1. כל בדיקות unit עוברות (`npm --prefix functions test`).
+2. בדיקות emulator עוברות או מדווחות עם סיבת חסימה סביבתית ברורה.
+3. אפשר להריץ מקומית `hosting + functions + firestore` ולבצע ingest/search/list מקצה לקצה.
+4. כל endpoint מחזיר payload יציב הכולל `ok`, `status`, ו־`durationMs`; ובמקרי כשל גם `errorType`.
 
-- עמוד סטטי ב־`public/index.html` עם:
-  - טופס שליחת URL ל־`/createSummaryFromUrl`.
-  - כפתור להפעלת preset של העליון (`/searchSupremeLastWeekDecisions`).
-  - כפתור לרענון רשימת סיכומים אחרונים (`/listLatestSummaries`).
-  - תצוגת סטטוס ו־JSON response (כולל זמני ריצה בסיסיים).
+## Endpoints
 
-## סטטוס נוכחי (חשוב)
+### `POST /createSummaryFromUrl`
 
-- חוקי Firestore הוקשחו: גישת Client SDK חסומה כברירת־מחדל (קריאה/כתיבה נחסמות), והכתיבה מתבצעת דרך Cloud Functions (Admin SDK).
-- נוספו בדיקות unit בסיסיות ל־helpers הקריטיים בצד ה־Functions.
-- נוסף hardening ל־request handler: אם `writeSummaryDoc` לא מוזרק כראוי, מוחזרת שגיאת קונפיגורציה ברורה (500).
+- קלט: `{ "url": "https://..." }`
+- פלט הצלחה: `{ ok: true, id, status: "done", chars, durationMs }`
+- פלט כשל: `{ ok: false, status: "failed", error, errorType, id, durationMs }`
 
-## איך להריץ מקומית
+### `POST /searchSupremeLastWeekDecisions`
+
+- מריץ preset: שבוע אחרון + החלטות מעל 2 עמודים.
+- פלט הצלחה/כשל זהה במבנה ל־`createSummaryFromUrl`.
+
+### `GET /listLatestSummaries?limit=10`
+
+- `limit` אופציונלי אך אם נשלח חייב להיות מספר שלם בטווח 1..50.
+- פלט הצלחה: `{ ok: true, count, summaries, durationMs }`
+- פלט כשל: `{ ok: false, error, errorType, durationMs }`
+
+## איך מריצים מקומית
 
 ### דרישות
 
 - Node.js 20
-- Firebase CLI (או הרצה דרך `npx firebase-tools`)
+- Firebase CLI (מקומי או גלובלי)
 
 ### התקנה
 
@@ -52,59 +63,37 @@ cd functions
 npm install
 ```
 
-### הרצה עם אמולטור פונקציות
-
-```bash
-cd functions
-npm run serve
-```
-
-### בדיקת חוקי Firestore באמולטור
-
-```bash
-firebase emulators:start --only firestore,functions
-```
-
-> הערה: גם כשהחוקים חוסמים גישת לקוח, Cloud Functions שמריצות Admin SDK עדיין יכולות לכתוב ל־Firestore.
-
-### התנסות מלאה במערכת (MVP local)
+### הרצת אמולטורים מלאים (הדרך המומלצת)
 
 ```bash
 firebase emulators:start --only hosting,functions,firestore
 ```
 
-לאחר שהאמולטורים עולים:
+לאחר עליית האמולטורים:
 
-1. לפתוח דפדפן ב־`http://127.0.0.1:5000`.
-2. לשלוח URL דרך הטופס (`createSummaryFromUrl`) או להריץ חיפוש Preset.
-3. ללחוץ על "רענון סיכומים אחרונים" כדי לראות את הרשומות האחרונות מהשרת.
-4. לראות תוצאה מיידית ב־UI וגם במסמכי `summaries` באמולטור Firestore.
+1. פותחים `http://127.0.0.1:5000`.
+2. שולחים URL דרך הטופס או מריצים preset של העליון.
+3. בודקים שהרשימה מתרעננת אוטומטית ושמוחזר JSON מלא.
 
-### הרצת בדיקות
+## בדיקות
 
-```bash
-npm --prefix functions run test
-```
-
-### הרצת בדיקות Integration מול אמולטורים
+### Unit + module tests
 
 ```bash
-cd functions
-npm run test:emulator
+npm --prefix functions test
 ```
 
-הסקריפט משתמש ב־`npx firebase-tools`, כך שלא חייבת להיות התקנת Firebase CLI גלובלית מראש.
+### Integration tests על האמולטור
 
-הפקודה מריצה את אמולטור Functions + Firestore ובודקת end-to-end את המסלול:
-HTTP request -> function -> write/read מול Firestore.
+```bash
+npm --prefix functions run test:emulator
+```
 
-## תוכנית המשך (השלבים הבאים)
+ברירת המחדל משתמשת ב־`firebase-tools` כתלות dev מקומית (לא `npx`), כדי למנוע תלות בהורדה דינמית בזמן ריצה.
 
-1. **אבטחה (שלב הבא)**: לפתוח גישה מינימלית לפי auth/roles רק אם יידרש Client SDK.
-2. **אמינות (שלב הבא)**: הרחבת הבדיקות ל־integration/emulator (כעת יש גם unit למסלול Supreme preset).
-3. **תחזוקה**: פיצול `functions/index.js` למודולים לפי דומיין.
-4. **תפעול**: שיפור לוגים/metrics (latency, סוג שגיאה, מקור).
-5. **UX**: שיפור דף הבדיקה (ולידציה, טעינה, היסטוריה קצרה).
+במקרה שצריך עדיין אפשר להשתמש בגיבוי: `npm --prefix functions run test:emulator:npx`.
+
+אם הסביבה חוסמת גישה ל־npm registry בזמן `npm install`, זו עדיין חסימה סביבתית ולא כשל קוד.
 
 ## מבנה תיקיות
 
@@ -114,10 +103,16 @@ HTTP request -> function -> write/read מול Firestore.
 ├── firestore.rules
 ├── functions/
 │   ├── core.js
+│   ├── index.js
 │   ├── index.test.js
 │   ├── integration.emulator.test.js
-│   ├── index.js
-│   └── package.json
+│   ├── modules.test.js
+│   ├── queries/
+│   │   └── listLatestSummaries.js
+│   ├── services/
+│   │   └── supremeSearchRunner.js
+│   └── writers/
+│       └── summaryWriter.js
 └── public/
     └── index.html
 ```
