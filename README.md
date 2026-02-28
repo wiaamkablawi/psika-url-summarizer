@@ -89,7 +89,11 @@ npm --prefix functions test
 npm --prefix functions run test:emulator
 ```
 
-הסקריפט משתמש ב־`npx firebase-tools`. אם הסביבה חוסמת גישה ל־npm registry, זו חסימה סביבתית ולא כשל קוד.
+ברירת המחדל משתמשת ב־`firebase-tools` כתלות dev מקומית (לא `npx`), כדי למנוע תלות בהורדה דינמית בזמן ריצה.
+
+במקרה שצריך עדיין אפשר להשתמש בגיבוי: `npm --prefix functions run test:emulator:npx`.
+
+אם הסביבה חוסמת גישה ל־npm registry בזמן `npm install`, זו עדיין חסימה סביבתית ולא כשל קוד.
 
 ## מבנה תיקיות
 
