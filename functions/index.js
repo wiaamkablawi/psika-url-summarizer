@@ -1,35 +1,18 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const core = require("./core");
+const {createSummaryWriter} = require("./writers/summaryWriter");
+const {createListLatestSummariesQuery} = require("./queries/listLatestSummaries");
+const {createSupremeSearchRunner} = require("./services/supremeSearchRunner");
 
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 
 const db = admin.firestore();
-
-async function writeSummaryDoc(data) {
-  const docRef = await db.collection("summaries").add(data);
-  return docRef.id;
-}
-
-
-async function listLatestSummaries(limit) {
-  const snapshot = await db.collection("summaries").orderBy("fetchedAt", "desc").limit(limit).get();
-  return snapshot.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      status: data.status || null,
-      source: data.source || null,
-      contentType: data.contentType || null,
-      error: data.error || null,
-      chars: typeof data.text === "string" ? data.text.length : 0,
-      durationMs: typeof data.durationMs === "number" ? data.durationMs : null,
-      fetchedAt: data.fetchedAt ? data.fetchedAt.toDate().toISOString() : null,
-    };
-  });
-}
+const writeSummaryDoc = createSummaryWriter(db);
+const listLatestSummaries = createListLatestSummariesQuery(db, core.createHttpError);
+const runSupremeSearch = createSupremeSearchRunner(core);
 
 exports.createSummaryFromUrl = functions.https.onRequest((req, res) =>
   core.handleRequest(
@@ -38,6 +21,7 @@ exports.createSummaryFromUrl = functions.https.onRequest((req, res) =>
     async (body) => core.runUrlIngest(typeof body.url === "string" ? body.url.trim() : ""),
     (result) => ({type: "url", url: result.normalizedUrl}),
     {
+      endpointName: "createSummaryFromUrl",
       writeSummaryDoc,
       failureSourceBuilder: (request) => ({
         type: "url",
@@ -51,7 +35,7 @@ exports.searchSupremeLastWeekDecisions = functions.https.onRequest((req, res) =>
   core.handleRequest(
     req,
     res,
-    core.runSupremePresetSearch,
+    runSupremeSearch,
     (result) => ({
       type: "preset",
       provider: "supreme.court.gov.il",
@@ -59,6 +43,7 @@ exports.searchSupremeLastWeekDecisions = functions.https.onRequest((req, res) =>
       preset: result.meta.preset,
     }),
     {
+      endpointName: "searchSupremeLastWeekDecisions",
       writeSummaryDoc,
       failureSourceBuilder: () => ({
         type: "preset",
@@ -70,9 +55,8 @@ exports.searchSupremeLastWeekDecisions = functions.https.onRequest((req, res) =>
   ),
 );
 
-
 exports.listLatestSummaries = functions.https.onRequest((req, res) =>
-  core.handleListSummariesRequest(req, res, {listSummaries: listLatestSummaries}),
+  core.handleListSummariesRequest(req, res, {endpointName: "listLatestSummaries", listSummaries: listLatestSummaries}),
 );
 
 if (process.env.NODE_ENV === "test") {

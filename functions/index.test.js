@@ -177,6 +177,7 @@ test("handleRequest writes failed document and returns error payload", async () 
   assert.equal(res.statusCode, 502);
   assert.equal(res.body.ok, false);
   assert.equal(res.body.id, "failed-1");
+  assert.equal(res.body.errorType, "Error");
   assert.equal(typeof res.body.durationMs, "number");
   assert.equal(writes[0].status, "failed");
   assert.equal(typeof writes[0].durationMs, "number");
@@ -189,6 +190,19 @@ test("readResponseBodyWithLimit rejects payloads larger than MAX_RESPONSE_BYTES"
   await assert.rejects(() => core.readResponseBodyWithLimit(response), (error) => error.status === 413);
 });
 
+
+
+
+test("parseListLimit enforces strict range and format", () => {
+  assert.equal(core.parseListLimit(undefined), 20);
+  assert.equal(core.parseListLimit("1"), 1);
+  assert.equal(core.parseListLimit("50"), 50);
+  assert.throws(() => core.parseListLimit("0"), /between 1 and 50/);
+  assert.throws(() => core.parseListLimit("51"), /between 1 and 50/);
+  assert.throws(() => core.parseListLimit("2.5"), /between 1 and 50/);
+  assert.throws(() => core.parseListLimit("abc"), /between 1 and 50/);
+  assert.throws(() => core.parseListLimit(["2", "3"]), /between 1 and 50/);
+});
 
 test("handleListSummariesRequest returns list payload for GET", async () => {
   const req = {method: "GET", query: {limit: "2"}};
@@ -207,6 +221,20 @@ test("handleListSummariesRequest returns list payload for GET", async () => {
   assert.equal(typeof res.body.durationMs, "number");
 });
 
+
+
+test("handleListSummariesRequest OPTIONS advertises GET in CORS", async () => {
+  const req = {method: "OPTIONS", query: {}};
+  const res = createMockRes();
+
+  await core.handleListSummariesRequest(req, res, {
+    listSummaries: async () => [],
+  });
+
+  assert.equal(res.statusCode, 204);
+  assert.equal(res.headers["Access-Control-Allow-Methods"], "GET, OPTIONS");
+});
+
 test("handleListSummariesRequest validates method and config", async () => {
   const badMethodReq = {method: "POST", query: {}};
   const badMethodRes = createMockRes();
@@ -220,6 +248,36 @@ test("handleListSummariesRequest validates method and config", async () => {
   await core.handleListSummariesRequest(missingCfgReq, missingCfgRes, {});
   assert.equal(missingCfgRes.statusCode, 500);
   assert.equal(missingCfgRes.body.ok, false);
+});
+
+
+
+test("handleListSummariesRequest returns 400 for invalid limit", async () => {
+  const req = {method: "GET", query: {limit: "abc"}};
+  const res = createMockRes();
+
+  await core.handleListSummariesRequest(req, res, {listSummaries: async () => []});
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.body.ok, false);
+  assert.equal(res.body.errorType, "ValidationError");
+  assert.equal(typeof res.body.durationMs, "number");
+});
+
+test("handleListSummariesRequest maps query failures", async () => {
+  const req = {method: "GET", query: {limit: "4"}};
+  const res = createMockRes();
+
+  await core.handleListSummariesRequest(req, res, {
+    listSummaries: async () => {
+      throw core.createHttpError(503, "Firestore query failed", "FirestoreQueryError");
+    },
+  });
+
+  assert.equal(res.statusCode, 503);
+  assert.equal(res.body.ok, false);
+  assert.equal(res.body.errorType, "FirestoreQueryError");
+  assert.equal(typeof res.body.durationMs, "number");
 });
 
 test("runSupremePresetSearch returns extracted text and preset metadata", async () => {
