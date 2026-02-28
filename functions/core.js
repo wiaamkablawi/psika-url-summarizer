@@ -253,10 +253,20 @@ async function runSupremePresetSearch() {
 }
 
 async function handleRequest(req, res, runner, sourceBuilder, options = {}) {
-  const docWriter = options.writeSummaryDoc;
   setCorsHeaders(res);
   if (req.method === "OPTIONS") return res.status(204).send("");
   if (req.method !== "POST") return res.status(405).json({ok: false, error: "Method not allowed"});
+
+  const docWriter = options.writeSummaryDoc;
+  if (typeof docWriter !== "function") {
+    console.error("Server misconfiguration: writeSummaryDoc missing");
+    return res.status(500).json({
+      ok: false,
+      error: "Server misconfiguration: writeSummaryDoc missing",
+      id: null,
+      status: "failed",
+    });
+  }
 
   console.log(`${runner.name} start`);
 

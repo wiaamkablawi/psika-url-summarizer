@@ -237,3 +237,21 @@ test("runSupremePresetSearch rejects non-html result response", async () => {
     global.fetch = originalFetch;
   }
 });
+
+test("handleRequest returns 500 when writeSummaryDoc is missing", async () => {
+  const req = {method: "POST", body: {url: "https://example.com"}};
+  const res = createMockRes();
+
+  await core.handleRequest(
+    req,
+    res,
+    async () => ({contentType: "text/plain", text: "abc"}),
+    () => ({type: "url", url: "https://example.com"}),
+  );
+
+  assert.equal(res.statusCode, 500);
+  assert.equal(res.body.ok, false);
+  assert.equal(res.body.id, null);
+  assert.equal(res.body.status, "failed");
+  assert.match(res.body.error, /writeSummaryDoc missing/);
+});

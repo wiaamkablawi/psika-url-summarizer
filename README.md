@@ -31,6 +31,7 @@
 
 - חוקי Firestore הוקשחו: גישת Client SDK חסומה כברירת־מחדל (קריאה/כתיבה נחסמות), והכתיבה מתבצעת דרך Cloud Functions (Admin SDK).
 - נוספו בדיקות unit בסיסיות ל־helpers הקריטיים בצד ה־Functions.
+- נוסף hardening ל־request handler: אם `writeSummaryDoc` לא מוזרק כראוי, מוחזרת שגיאת קונפיגורציה ברורה (500).
 
 ## איך להריץ מקומית
 
