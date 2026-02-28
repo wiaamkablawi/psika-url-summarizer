@@ -30,7 +30,7 @@
 ## סטטוס נוכחי (חשוב)
 
 - חוקי Firestore הוקשחו: גישת Client SDK חסומה כברירת־מחדל (קריאה/כתיבה נחסמות), והכתיבה מתבצעת דרך Cloud Functions (Admin SDK).
-- אין כרגע סט בדיקות unit אוטומטיות לפונקציות.
+- נוספו בדיקות unit בסיסיות ל־helpers הקריטיים בצד ה־Functions.
 
 ## איך להריץ מקומית
 
@@ -60,6 +60,12 @@ firebase emulators:start --only firestore,functions
 ```
 
 > הערה: גם כשהחוקים חוסמים גישת לקוח, Cloud Functions שמריצות Admin SDK עדיין יכולות לכתוב ל־Firestore.
+
+### הרצת בדיקות
+
+```bash
+npm --prefix functions run test
+```
 
 ## תוכנית המשך (השלבים הבאים)
 
