@@ -258,6 +258,8 @@ async function handleRequest(req, res, runner, sourceBuilder, options = {}) {
   if (req.method !== "POST") return res.status(405).json({ok: false, error: "Method not allowed"});
 
   const docWriter = options.writeSummaryDoc;
+  const startedAtMs = Date.now();
+  const requestPath = req.path || req.url || "unknown";
   if (typeof docWriter !== "function") {
     console.error("Server misconfiguration: writeSummaryDoc missing");
     return res.status(500).json({
@@ -268,40 +270,82 @@ async function handleRequest(req, res, runner, sourceBuilder, options = {}) {
     });
   }
 
-  console.log(`${runner.name} start`);
+  console.log("handleRequest start", {runner: runner.name, path: requestPath});
 
   try {
     const result = await runner(req.body || {});
+    const durationMs = Date.now() - startedAtMs;
     const doc = {
       source: sourceBuilder(result),
       status: "done",
       fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
       contentType: result.contentType,
       text: result.text,
+      durationMs,
     };
     if (result.meta) doc.meta = result.meta;
 
     const docId = await docWriter(doc);
-    console.log(`${runner.name} complete`, {docId, status: "done"});
-    return res.status(200).json({ok: true, id: docId, status: "done", chars: result.text.length});
+    console.log("handleRequest complete", {runner: runner.name, path: requestPath, docId, status: "done", durationMs});
+    return res.status(200).json({ok: true, id: docId, status: "done", chars: result.text.length, durationMs});
   } catch (error) {
     const status = error.status || 500;
     const message = error.message || "Unexpected error";
+    const durationMs = Date.now() - startedAtMs;
+
+    const failureSourceBuilder = options.failureSourceBuilder;
+    let failureSource = {type: "url", url: req.body?.url || null};
+    if (typeof failureSourceBuilder === "function") {
+      try {
+        const builtSource = failureSourceBuilder(req);
+        if (builtSource && typeof builtSource === "object") {
+          failureSource = builtSource;
+        }
+      } catch (sourceError) {
+        console.error("Failed building failure source", sourceError);
+      }
+    }
 
     let docId = null;
     try {
       docId = await docWriter({
-        source: {type: "url", url: req.body?.url || null},
+        source: failureSource,
         status: "failed",
         fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
         error: message,
+        durationMs,
       });
-      console.log(`${runner.name} complete`, {docId, status: "failed", error: message});
+      console.log("handleRequest complete", {runner: runner.name, path: requestPath, docId, status: "failed", error: message, durationMs});
     } catch (writeError) {
       console.error("Failed writing failed summary doc", writeError);
     }
 
-    return res.status(status).json({ok: false, error: message, id: docId, status: "failed"});
+    return res.status(status).json({ok: false, error: message, id: docId, status: "failed", durationMs});
+  }
+}
+
+
+async function handleListSummariesRequest(req, res, options = {}) {
+  setCorsHeaders(res);
+  if (req.method === "OPTIONS") return res.status(204).send("");
+  if (req.method !== "GET") return res.status(405).json({ok: false, error: "Method not allowed"});
+
+  const listSummaries = options.listSummaries;
+  const startedAtMs = Date.now();
+  if (typeof listSummaries !== "function") {
+    console.error("Server misconfiguration: listSummaries missing");
+    return res.status(500).json({ok: false, error: "Server misconfiguration: listSummaries missing"});
+  }
+
+  try {
+    const limit = Number(req.query?.limit);
+    const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 50) : 20;
+    const summaries = await listSummaries(safeLimit);
+    const durationMs = Date.now() - startedAtMs;
+    return res.status(200).json({ok: true, count: summaries.length, summaries, durationMs});
+  } catch (error) {
+    const message = error.message || "Unexpected error";
+    return res.status(500).json({ok: false, error: message});
   }
 }
 
@@ -318,4 +362,5 @@ module.exports = {
   extractHiddenFields,
   runSupremePresetSearch,
   handleRequest,
+  handleListSummariesRequest,
 };

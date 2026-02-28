@@ -147,7 +147,9 @@ test("handleRequest returns success payload and writes done document", async () 
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.ok, true);
   assert.equal(res.body.id, "doc-123");
+  assert.equal(typeof res.body.durationMs, "number");
   assert.equal(docs[0].status, "done");
+  assert.equal(typeof docs[0].durationMs, "number");
 });
 
 test("handleRequest writes failed document and returns error payload", async () => {
@@ -175,7 +177,9 @@ test("handleRequest writes failed document and returns error payload", async () 
   assert.equal(res.statusCode, 502);
   assert.equal(res.body.ok, false);
   assert.equal(res.body.id, "failed-1");
+  assert.equal(typeof res.body.durationMs, "number");
   assert.equal(writes[0].status, "failed");
+  assert.equal(typeof writes[0].durationMs, "number");
 });
 
 test("readResponseBodyWithLimit rejects payloads larger than MAX_RESPONSE_BYTES", async () => {
@@ -183,6 +187,39 @@ test("readResponseBodyWithLimit rejects payloads larger than MAX_RESPONSE_BYTES"
   const response = createResponse({chunks: [tooLargeChunk]});
 
   await assert.rejects(() => core.readResponseBodyWithLimit(response), (error) => error.status === 413);
+});
+
+
+test("handleListSummariesRequest returns list payload for GET", async () => {
+  const req = {method: "GET", query: {limit: "2"}};
+  const res = createMockRes();
+
+  await core.handleListSummariesRequest(req, res, {
+    listSummaries: async (limit) => {
+      assert.equal(limit, 2);
+      return [{id: "a"}, {id: "b"}];
+    },
+  });
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.ok, true);
+  assert.equal(res.body.count, 2);
+  assert.equal(typeof res.body.durationMs, "number");
+});
+
+test("handleListSummariesRequest validates method and config", async () => {
+  const badMethodReq = {method: "POST", query: {}};
+  const badMethodRes = createMockRes();
+  await core.handleListSummariesRequest(badMethodReq, badMethodRes, {
+    listSummaries: async () => [],
+  });
+  assert.equal(badMethodRes.statusCode, 405);
+
+  const missingCfgReq = {method: "GET", query: {}};
+  const missingCfgRes = createMockRes();
+  await core.handleListSummariesRequest(missingCfgReq, missingCfgRes, {});
+  assert.equal(missingCfgRes.statusCode, 500);
+  assert.equal(missingCfgRes.body.ok, false);
 });
 
 test("runSupremePresetSearch returns extracted text and preset metadata", async () => {
@@ -238,6 +275,67 @@ test("runSupremePresetSearch rejects non-html result response", async () => {
   }
 });
 
+
+test("handleRequest uses failureSourceBuilder for failed documents", async () => {
+  const req = {method: "POST", body: {foo: "bar"}};
+  const res = createMockRes();
+  const writes = [];
+
+  await core.handleRequest(
+    req,
+    res,
+    async () => {
+      throw core.createHttpError(502, "upstream failed");
+    },
+    () => ({type: "url", url: "https://example.com"}),
+    {
+      writeSummaryDoc: async (doc) => {
+        writes.push(doc);
+        return "failed-custom-source";
+      },
+      failureSourceBuilder: () => ({
+        type: "preset",
+        provider: "supreme.court.gov.il",
+        preset: "last_week_decisions_over_2_pages",
+      }),
+    },
+  );
+
+  assert.equal(res.statusCode, 502);
+  assert.equal(writes[0].source.type, "preset");
+  assert.equal(writes[0].source.provider, "supreme.court.gov.il");
+  assert.equal(typeof writes[0].durationMs, "number");
+});
+
+test("handleRequest falls back to URL source when failureSourceBuilder throws", async () => {
+  const req = {method: "POST", body: {url: "https://fallback.example"}};
+  const res = createMockRes();
+  const writes = [];
+
+  await core.handleRequest(
+    req,
+    res,
+    async () => {
+      throw core.createHttpError(500, "boom");
+    },
+    () => ({type: "url", url: "https://fallback.example"}),
+    {
+      writeSummaryDoc: async (doc) => {
+        writes.push(doc);
+        return "failed-fallback-source";
+      },
+      failureSourceBuilder: () => {
+        throw new Error("source builder crashed");
+      },
+    },
+  );
+
+  assert.equal(res.statusCode, 500);
+  assert.equal(writes[0].source.type, "url");
+  assert.equal(writes[0].source.url, "https://fallback.example");
+  assert.equal(typeof writes[0].durationMs, "number");
+});
+
 test("handleRequest returns 500 when writeSummaryDoc is missing", async () => {
   const req = {method: "POST", body: {url: "https://example.com"}};
   const res = createMockRes();
@@ -253,5 +351,6 @@ test("handleRequest returns 500 when writeSummaryDoc is missing", async () => {
   assert.equal(res.body.ok, false);
   assert.equal(res.body.id, null);
   assert.equal(res.body.status, "failed");
+  assert.equal(typeof res.body.durationMs, "undefined");
   assert.match(res.body.error, /writeSummaryDoc missing/);
 });
