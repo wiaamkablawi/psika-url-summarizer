@@ -277,8 +277,10 @@ async function handleRequest(req, res, runner, sourceBuilder, options = {}) {
     return res.status(500).json({
       ok: false,
       error: "Server misconfiguration: writeSummaryDoc missing",
+      errorType: "MisconfigurationError",
       id: null,
       status: "failed",
+      durationMs: Date.now() - startedAtMs,
     });
   }
 
@@ -331,6 +333,7 @@ async function handleRequest(req, res, runner, sourceBuilder, options = {}) {
         status: "failed",
         fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
         error: message,
+        errorType,
         durationMs,
       });
     } catch (writeError) {
@@ -364,7 +367,12 @@ async function handleListSummariesRequest(req, res, options = {}) {
       errorType: "MisconfigurationError",
       message: "Server misconfiguration: listSummaries missing",
     });
-    return res.status(500).json({ok: false, error: "Server misconfiguration: listSummaries missing", errorType: "MisconfigurationError"});
+    return res.status(500).json({
+      ok: false,
+      error: "Server misconfiguration: listSummaries missing",
+      errorType: "MisconfigurationError",
+      durationMs: Date.now() - startedAtMs,
+    });
   }
 
   try {

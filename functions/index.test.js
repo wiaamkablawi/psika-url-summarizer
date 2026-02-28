@@ -180,6 +180,7 @@ test("handleRequest writes failed document and returns error payload", async () 
   assert.equal(res.body.errorType, "Error");
   assert.equal(typeof res.body.durationMs, "number");
   assert.equal(writes[0].status, "failed");
+  assert.equal(writes[0].errorType, "Error");
   assert.equal(typeof writes[0].durationMs, "number");
 });
 
@@ -248,6 +249,38 @@ test("handleListSummariesRequest validates method and config", async () => {
   await core.handleListSummariesRequest(missingCfgReq, missingCfgRes, {});
   assert.equal(missingCfgRes.statusCode, 500);
   assert.equal(missingCfgRes.body.ok, false);
+  assert.equal(missingCfgRes.body.errorType, "MisconfigurationError");
+  assert.equal(typeof missingCfgRes.body.durationMs, "number");
+});
+
+
+
+test("handleListSummariesRequest returns 400 for invalid limit", async () => {
+  const req = {method: "GET", query: {limit: "abc"}};
+  const res = createMockRes();
+
+  await core.handleListSummariesRequest(req, res, {listSummaries: async () => []});
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.body.ok, false);
+  assert.equal(res.body.errorType, "ValidationError");
+  assert.equal(typeof res.body.durationMs, "number");
+});
+
+test("handleListSummariesRequest maps query failures", async () => {
+  const req = {method: "GET", query: {limit: "4"}};
+  const res = createMockRes();
+
+  await core.handleListSummariesRequest(req, res, {
+    listSummaries: async () => {
+      throw core.createHttpError(503, "Firestore query failed", "FirestoreQueryError");
+    },
+  });
+
+  assert.equal(res.statusCode, 503);
+  assert.equal(res.body.ok, false);
+  assert.equal(res.body.errorType, "FirestoreQueryError");
+  assert.equal(typeof res.body.durationMs, "number");
 });
 
 
@@ -409,6 +442,7 @@ test("handleRequest returns 500 when writeSummaryDoc is missing", async () => {
   assert.equal(res.body.ok, false);
   assert.equal(res.body.id, null);
   assert.equal(res.body.status, "failed");
-  assert.equal(typeof res.body.durationMs, "undefined");
+  assert.equal(res.body.errorType, "MisconfigurationError");
+  assert.equal(typeof res.body.durationMs, "number");
   assert.match(res.body.error, /writeSummaryDoc missing/);
 });
