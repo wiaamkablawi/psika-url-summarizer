@@ -185,6 +185,38 @@ test("readResponseBodyWithLimit rejects payloads larger than MAX_RESPONSE_BYTES"
   await assert.rejects(() => core.readResponseBodyWithLimit(response), (error) => error.status === 413);
 });
 
+
+test("handleListSummariesRequest returns list payload for GET", async () => {
+  const req = {method: "GET", query: {limit: "2"}};
+  const res = createMockRes();
+
+  await core.handleListSummariesRequest(req, res, {
+    listSummaries: async (limit) => {
+      assert.equal(limit, 2);
+      return [{id: "a"}, {id: "b"}];
+    },
+  });
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.ok, true);
+  assert.equal(res.body.count, 2);
+});
+
+test("handleListSummariesRequest validates method and config", async () => {
+  const badMethodReq = {method: "POST", query: {}};
+  const badMethodRes = createMockRes();
+  await core.handleListSummariesRequest(badMethodReq, badMethodRes, {
+    listSummaries: async () => [],
+  });
+  assert.equal(badMethodRes.statusCode, 405);
+
+  const missingCfgReq = {method: "GET", query: {}};
+  const missingCfgRes = createMockRes();
+  await core.handleListSummariesRequest(missingCfgReq, missingCfgRes, {});
+  assert.equal(missingCfgRes.statusCode, 500);
+  assert.equal(missingCfgRes.body.ok, false);
+});
+
 test("runSupremePresetSearch returns extracted text and preset metadata", async () => {
   const originalFetch = global.fetch;
   const calls = [];

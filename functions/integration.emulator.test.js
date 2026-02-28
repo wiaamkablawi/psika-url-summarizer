@@ -16,11 +16,11 @@ function getDb() {
   return admin.firestore();
 }
 
-async function postJson(path, payload) {
+async function requestJson(path, {method = "GET", payload} = {}) {
   const response = await fetch(`${baseUrl}${path}`, {
-    method: "POST",
+    method,
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(payload),
+    body: payload ? JSON.stringify(payload) : undefined,
   });
 
   let body = null;
@@ -40,8 +40,9 @@ async function getSummaryDoc(id) {
 }
 
 test("createSummaryFromUrl writes done summary document", {skip: !shouldRun(), timeout: 30000}, async () => {
-  const {status, body} = await postJson("/createSummaryFromUrl", {
-    url: "https://example.com/",
+  const {status, body} = await requestJson("/createSummaryFromUrl", {
+    method: "POST",
+    payload: {url: "https://example.com/"},
   });
 
   assert.equal(status, 200);
@@ -61,8 +62,9 @@ test("createSummaryFromUrl writes done summary document", {skip: !shouldRun(), t
 });
 
 test("createSummaryFromUrl writes failed summary document", {skip: !shouldRun(), timeout: 30000}, async () => {
-  const {status, body} = await postJson("/createSummaryFromUrl", {
-    url: "notaurl",
+  const {status, body} = await requestJson("/createSummaryFromUrl", {
+    method: "POST",
+    payload: {url: "notaurl"},
   });
 
   assert.equal(status, 400);
@@ -76,4 +78,24 @@ test("createSummaryFromUrl writes failed summary document", {skip: !shouldRun(),
   assert.equal(snapshot.get("source.type"), "url");
   assert.equal(snapshot.get("source.url"), "notaurl");
   assert.match(snapshot.get("error"), /Invalid URL/);
+});
+
+test("listLatestSummaries returns recent docs", {skip: !shouldRun(), timeout: 30000}, async () => {
+  const {status, body} = await requestJson("/listLatestSummaries?limit=5");
+
+  assert.equal(status, 200);
+  assert.equal(body?.ok, true);
+  assert.equal(Array.isArray(body?.summaries), true);
+  assert.ok(body.summaries.length >= 1);
+  assert.equal(typeof body.summaries[0].id, "string");
+});
+
+test("listLatestSummaries rejects non-GET", {skip: !shouldRun(), timeout: 30000}, async () => {
+  const {status, body} = await requestJson("/listLatestSummaries", {
+    method: "POST",
+    payload: {},
+  });
+
+  assert.equal(status, 405);
+  assert.equal(body?.ok, false);
 });

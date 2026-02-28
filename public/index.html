@@ -6,10 +6,12 @@
     <title>בדיקות אינג'סט URL</title>
     <style>
       body { font-family: Arial, sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
-      form, .preset { display: grid; gap: 0.75rem; margin-bottom: 1rem; }
+      form, .preset, .latest { display: grid; gap: 0.75rem; margin-bottom: 1rem; }
       input, button { padding: 0.6rem; font-size: 1rem; }
       pre { background: #f4f4f4; padding: 1rem; overflow-x: auto; }
       .status { font-weight: bold; }
+      ul { background: #f9f9f9; padding: 0.75rem 1rem; margin: 0; }
+      li { margin-bottom: 0.4rem; }
     </style>
   </head>
   <body>
@@ -25,6 +27,14 @@
       <button id="supreme-btn" type="button">שבוע אחרון + החלטות מעל 2 עמודים</button>
     </div>
 
+
+
+    <div class="latest">
+      <h2>סיכומים אחרונים</h2>
+      <button id="latest-btn" type="button">רענון סיכומים אחרונים</button>
+      <ul id="latest-list"></ul>
+    </div>
+
     <p class="status" id="status">מוכן</p>
     <pre id="response">{}</pre>
 
@@ -33,6 +43,26 @@
       const statusEl = document.getElementById("status");
       const responseEl = document.getElementById("response");
       const supremeBtn = document.getElementById("supreme-btn");
+      const latestBtn = document.getElementById("latest-btn");
+      const latestList = document.getElementById("latest-list");
+
+
+
+      function renderLatestSummaries(items) {
+        latestList.innerHTML = "";
+        if (!Array.isArray(items) || !items.length) {
+          latestList.innerHTML = "<li>אין סיכומים להצגה</li>";
+          return;
+        }
+
+        for (const item of items) {
+          const li = document.createElement("li");
+          const sourceType = item?.source?.type || "unknown";
+          const sourceValue = item?.source?.url || item?.source?.preset || "";
+          li.textContent = `${item.id} | ${item.status} | ${sourceType} ${sourceValue}`;
+          latestList.appendChild(li);
+        }
+      }
 
       async function postJson(path, payload) {
         const res = await fetch(path, {
@@ -68,6 +98,23 @@
           responseEl.textContent = JSON.stringify({ok: false, error: error.message}, null, 2);
         }
       });
+
+      latestBtn.addEventListener("click", async () => {
+        statusEl.textContent = "טוען סיכומים אחרונים...";
+        try {
+          const res = await fetch("/listLatestSummaries?limit=10", {method: "GET"});
+          const data = await res.json();
+          statusEl.textContent = `HTTP ${res.status} - ${data.ok ? "success" : "error"}`;
+          responseEl.textContent = JSON.stringify(data, null, 2);
+          if (data.ok) {
+            renderLatestSummaries(data.summaries);
+          }
+        } catch (error) {
+          statusEl.textContent = "Request failed";
+          responseEl.textContent = JSON.stringify({ok: false, error: error.message}, null, 2);
+        }
+      });
+
     </script>
   </body>
 </html>

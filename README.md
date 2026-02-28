@@ -20,11 +20,16 @@
   - טוען את עמוד החיפוש של העליון, אוסף hidden fields, ושולח בקשת חיפוש עם preset.
   - מחלץ טקסט מהתוצאות ושומר מסמך ב־`summaries`.
 
+- `listLatestSummaries`:
+  - מקבל `GET` עם `limit` אופציונלי.
+  - מחזיר את הסיכומים האחרונים מ־Firestore (כולל `status`, `source`, ו־`fetchedAt`).
+
 ### Frontend לבדיקה ידנית
 
 - עמוד סטטי ב־`public/index.html` עם:
   - טופס שליחת URL ל־`/createSummaryFromUrl`.
   - כפתור להפעלת preset של העליון (`/searchSupremeLastWeekDecisions`).
+  - כפתור לרענון רשימת סיכומים אחרונים (`/listLatestSummaries`).
   - תצוגת סטטוס ו־JSON response.
 
 ## סטטוס נוכחי (חשוב)
@@ -72,7 +77,8 @@ firebase emulators:start --only hosting,functions,firestore
 
 1. לפתוח דפדפן ב־`http://127.0.0.1:5000`.
 2. לשלוח URL דרך הטופס (`createSummaryFromUrl`) או להריץ חיפוש Preset.
-3. לראות תוצאה מיידית ב־UI וגם במסמכי `summaries` באמולטור Firestore.
+3. ללחוץ על "רענון סיכומים אחרונים" כדי לראות את הרשומות האחרונות מהשרת.
+4. לראות תוצאה מיידית ב־UI וגם במסמכי `summaries` באמולטור Firestore.
 
 ### הרצת בדיקות
 
@@ -90,7 +96,7 @@ npm run test:emulator
 הסקריפט משתמש ב־`npx firebase-tools`, כך שלא חייבת להיות התקנת Firebase CLI גלובלית מראש.
 
 הפקודה מריצה את אמולטור Functions + Firestore ובודקת end-to-end את המסלול:
-HTTP request -> function -> write ל־Firestore (גם `done` וגם `failed`).
+HTTP request -> function -> write/read מול Firestore.
 
 ## תוכנית המשך (השלבים הבאים)
 

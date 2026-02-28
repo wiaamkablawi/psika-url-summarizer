@@ -318,6 +318,29 @@ async function handleRequest(req, res, runner, sourceBuilder, options = {}) {
   }
 }
 
+
+async function handleListSummariesRequest(req, res, options = {}) {
+  setCorsHeaders(res);
+  if (req.method === "OPTIONS") return res.status(204).send("");
+  if (req.method !== "GET") return res.status(405).json({ok: false, error: "Method not allowed"});
+
+  const listSummaries = options.listSummaries;
+  if (typeof listSummaries !== "function") {
+    console.error("Server misconfiguration: listSummaries missing");
+    return res.status(500).json({ok: false, error: "Server misconfiguration: listSummaries missing"});
+  }
+
+  try {
+    const limit = Number(req.query?.limit);
+    const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 50) : 20;
+    const summaries = await listSummaries(safeLimit);
+    return res.status(200).json({ok: true, count: summaries.length, summaries});
+  } catch (error) {
+    const message = error.message || "Unexpected error";
+    return res.status(500).json({ok: false, error: message});
+  }
+}
+
 module.exports = {
   MAX_RESPONSE_BYTES,
   SUPREME_SEARCH_URL,
@@ -331,4 +354,5 @@ module.exports = {
   extractHiddenFields,
   runSupremePresetSearch,
   handleRequest,
+  handleListSummariesRequest,
 };

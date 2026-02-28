@@ -13,6 +13,23 @@ async function writeSummaryDoc(data) {
   return docRef.id;
 }
 
+
+async function listLatestSummaries(limit) {
+  const snapshot = await db.collection("summaries").orderBy("fetchedAt", "desc").limit(limit).get();
+  return snapshot.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      status: data.status || null,
+      source: data.source || null,
+      contentType: data.contentType || null,
+      error: data.error || null,
+      chars: typeof data.text === "string" ? data.text.length : 0,
+      fetchedAt: data.fetchedAt ? data.fetchedAt.toDate().toISOString() : null,
+    };
+  });
+}
+
 exports.createSummaryFromUrl = functions.https.onRequest((req, res) =>
   core.handleRequest(
     req,
@@ -52,6 +69,11 @@ exports.searchSupremeLastWeekDecisions = functions.https.onRequest((req, res) =>
   ),
 );
 
+
+exports.listLatestSummaries = functions.https.onRequest((req, res) =>
+  core.handleListSummariesRequest(req, res, {listSummaries: listLatestSummaries}),
+);
+
 if (process.env.NODE_ENV === "test") {
   exports.__test = {
     MAX_RESPONSE_BYTES: core.MAX_RESPONSE_BYTES,
@@ -64,5 +86,6 @@ if (process.env.NODE_ENV === "test") {
     extractHiddenFields: core.extractHiddenFields,
     runSupremePresetSearch: core.runSupremePresetSearch,
     handleRequest: core.handleRequest,
+    handleListSummariesRequest: core.handleListSummariesRequest,
   };
 }
