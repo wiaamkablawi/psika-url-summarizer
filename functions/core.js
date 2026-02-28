@@ -6,9 +6,9 @@ const MAX_TEXT_CHARS = 40000;
 const FETCH_TIMEOUT_MS = 15000;
 const SUPREME_SEARCH_URL = "https://supreme.court.gov.il/Pages/fullsearch.aspx";
 
-function setCorsHeaders(res) {
+function setCorsHeaders(res, allowedMethods = "POST, OPTIONS") {
   res.set("Access-Control-Allow-Origin", "*");
-  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Methods", allowedMethods);
   res.set("Access-Control-Allow-Headers", "Content-Type");
 }
 
@@ -349,7 +349,7 @@ async function handleRequest(req, res, runner, sourceBuilder, options = {}) {
 }
 
 async function handleListSummariesRequest(req, res, options = {}) {
-  setCorsHeaders(res);
+  setCorsHeaders(res, "GET, OPTIONS");
   if (req.method === "OPTIONS") return res.status(204).send("");
   if (req.method !== "GET") return res.status(405).json({ok: false, error: "Method not allowed"});
 

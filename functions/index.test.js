@@ -221,6 +221,20 @@ test("handleListSummariesRequest returns list payload for GET", async () => {
   assert.equal(typeof res.body.durationMs, "number");
 });
 
+
+
+test("handleListSummariesRequest OPTIONS advertises GET in CORS", async () => {
+  const req = {method: "OPTIONS", query: {}};
+  const res = createMockRes();
+
+  await core.handleListSummariesRequest(req, res, {
+    listSummaries: async () => [],
+  });
+
+  assert.equal(res.statusCode, 204);
+  assert.equal(res.headers["Access-Control-Allow-Methods"], "GET, OPTIONS");
+});
+
 test("handleListSummariesRequest validates method and config", async () => {
   const badMethodReq = {method: "POST", query: {}};
   const badMethodRes = createMockRes();
