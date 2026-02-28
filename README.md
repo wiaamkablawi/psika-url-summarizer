@@ -29,8 +29,8 @@
 
 ## סטטוס נוכחי (חשוב)
 
-- חוקי Firestore כרגע פתוחים (`allow read, write: if true`) — מתאים רק לפיתוח/ניסוי.
-- אין כרגע סט בדיקות אוטומטיות בפועל.
+- חוקי Firestore הוקשחו: גישת Client SDK חסומה כברירת־מחדל (קריאה/כתיבה נחסמות), והכתיבה מתבצעת דרך Cloud Functions (Admin SDK).
+- אין כרגע סט בדיקות unit אוטומטיות לפונקציות.
 
 ## איך להריץ מקומית
 
@@ -53,9 +53,17 @@ cd functions
 npm run serve
 ```
 
+### בדיקת חוקי Firestore באמולטור
+
+```bash
+firebase emulators:start --only firestore,functions
+```
+
+> הערה: גם כשהחוקים חוסמים גישת לקוח, Cloud Functions שמריצות Admin SDK עדיין יכולות לכתוב ל־Firestore.
+
 ## תוכנית המשך (השלבים הבאים)
 
-1. **אבטחה**: הקשחת חוקי Firestore לפי auth/roles.
+1. **אבטחה (שלב הבא)**: לפתוח גישה מינימלית לפי auth/roles רק אם יידרש Client SDK.
 2. **אמינות**: הוספת בדיקות unit עם mocking ל־fetch.
 3. **תחזוקה**: פיצול `functions/index.js` למודולים לפי דומיין.
 4. **תפעול**: שיפור לוגים/metrics (latency, סוג שגיאה, מקור).
