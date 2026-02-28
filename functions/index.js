@@ -265,7 +265,8 @@ async function runSupremePresetSearch() {
   };
 }
 
-async function handleRequest(req, res, runner, sourceBuilder) {
+async function handleRequest(req, res, runner, sourceBuilder, options = {}) {
+  const docWriter = options.writeSummaryDoc || writeSummaryDoc;
   setCorsHeaders(res);
   if (req.method === "OPTIONS") return res.status(204).send("");
   if (req.method !== "POST") return res.status(405).json({ok: false, error: "Method not allowed"});
@@ -283,7 +284,7 @@ async function handleRequest(req, res, runner, sourceBuilder) {
     };
     if (result.meta) doc.meta = result.meta;
 
-    const docId = await writeSummaryDoc(doc);
+    const docId = await docWriter(doc);
     console.log(`${runner.name} complete`, {docId, status: "done"});
     return res.status(200).json({ok: true, id: docId, status: "done", chars: result.text.length});
   } catch (error) {
@@ -292,7 +293,7 @@ async function handleRequest(req, res, runner, sourceBuilder) {
 
     let docId = null;
     try {
-      docId = await writeSummaryDoc({
+      docId = await docWriter({
         source: {type: "url", url: req.body?.url || null},
         status: "failed",
         fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -324,3 +325,18 @@ exports.searchSupremeLastWeekDecisions = functions.https.onRequest((req, res) =>
     preset: result.meta.preset,
   })),
 );
+
+if (process.env.NODE_ENV === "test") {
+  exports.__test = {
+    MAX_RESPONSE_BYTES,
+    createHttpError,
+    isBlockedHostname,
+    extractTextFromHtml,
+    readResponseBodyWithLimit,
+    fetchWithTimeout,
+    runUrlIngest,
+    extractHiddenFields,
+    runSupremePresetSearch,
+    handleRequest,
+  };
+}
