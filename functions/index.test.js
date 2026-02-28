@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const {__test} = require("./index");
+const core = require("./core");
 
 function createResponse({ok = true, status = 200, contentType = "text/plain", chunks = []} = {}) {
   return {
@@ -50,25 +50,25 @@ function createMockRes() {
 }
 
 test("isBlockedHostname blocks localhost/private networks", () => {
-  assert.equal(__test.isBlockedHostname("localhost"), true);
-  assert.equal(__test.isBlockedHostname("192.168.1.2"), true);
-  assert.equal(__test.isBlockedHostname("example.com"), false);
+  assert.equal(core.isBlockedHostname("localhost"), true);
+  assert.equal(core.isBlockedHostname("192.168.1.2"), true);
+  assert.equal(core.isBlockedHostname("example.com"), false);
 });
 
 test("extractTextFromHtml strips scripts/tags and decodes entities", () => {
   const html = "<html><head><script>alert(1)</script></head><body><h1>Title</h1><p>A &amp; B</p></body></html>";
-  assert.equal(__test.extractTextFromHtml(html), "Title A & B");
+  assert.equal(core.extractTextFromHtml(html), "Title A & B");
 });
 
 test("runUrlIngest rejects empty URL", async () => {
-  await assert.rejects(() => __test.runUrlIngest(""), (error) => error.status === 400);
+  await assert.rejects(() => core.runUrlIngest(""), (error) => error.status === 400);
 });
 
 test("runUrlIngest rejects unsupported content type", async () => {
   const originalFetch = global.fetch;
   global.fetch = async () => createResponse({contentType: "application/pdf", chunks: [Buffer.from("x")]});
   try {
-    await assert.rejects(() => __test.runUrlIngest("https://example.com/file"), (error) => error.status === 415);
+    await assert.rejects(() => core.runUrlIngest("https://example.com/file"), (error) => error.status === 415);
   } finally {
     global.fetch = originalFetch;
   }
@@ -82,7 +82,7 @@ test("runUrlIngest returns normalized URL and extracted text", async () => {
       chunks: [Buffer.from("<html><body>Hello <b>world</b></body></html>")],
     });
   try {
-    const result = await __test.runUrlIngest("https://example.com");
+    const result = await core.runUrlIngest("https://example.com");
     assert.equal(result.normalizedUrl, "https://example.com/");
     assert.equal(result.contentType, "text/html");
     assert.equal(result.text, "Hello world");
@@ -99,7 +99,7 @@ test("fetchWithTimeout maps AbortError to 504", async () => {
     throw err;
   };
   try {
-    await assert.rejects(() => __test.fetchWithTimeout("https://example.com"), (error) => error.status === 504);
+    await assert.rejects(() => core.fetchWithTimeout("https://example.com"), (error) => error.status === 504);
   } finally {
     global.fetch = originalFetch;
   }
@@ -109,7 +109,7 @@ test("handleRequest returns 204 for OPTIONS and sets CORS headers", async () => 
   const req = {method: "OPTIONS"};
   const res = createMockRes();
 
-  await __test.handleRequest(req, res, async () => ({}), () => ({}));
+  await core.handleRequest(req, res, async () => ({}), () => ({}));
 
   assert.equal(res.statusCode, 204);
   assert.equal(res.body, "");
@@ -120,7 +120,7 @@ test("handleRequest returns 405 for non-POST", async () => {
   const req = {method: "GET"};
   const res = createMockRes();
 
-  await __test.handleRequest(req, res, async () => ({}), () => ({}));
+  await core.handleRequest(req, res, async () => ({}), () => ({}));
 
   assert.equal(res.statusCode, 405);
   assert.equal(res.body.ok, false);
@@ -131,7 +131,7 @@ test("handleRequest returns success payload and writes done document", async () 
   const res = createMockRes();
   const docs = [];
 
-  await __test.handleRequest(
+  await core.handleRequest(
     req,
     res,
     async () => ({contentType: "text/plain", text: "abc"}),
@@ -155,7 +155,7 @@ test("handleRequest writes failed document and returns error payload", async () 
   const res = createMockRes();
   const writes = [];
 
-  await __test.handleRequest(
+  await core.handleRequest(
     req,
     res,
     async () => {
@@ -179,10 +179,10 @@ test("handleRequest writes failed document and returns error payload", async () 
 });
 
 test("readResponseBodyWithLimit rejects payloads larger than MAX_RESPONSE_BYTES", async () => {
-  const tooLargeChunk = Buffer.alloc(__test.MAX_RESPONSE_BYTES + 1, "a");
+  const tooLargeChunk = Buffer.alloc(core.MAX_RESPONSE_BYTES + 1, "a");
   const response = createResponse({chunks: [tooLargeChunk]});
 
-  await assert.rejects(() => __test.readResponseBodyWithLimit(response), (error) => error.status === 413);
+  await assert.rejects(() => core.readResponseBodyWithLimit(response), (error) => error.status === 413);
 });
 
 test("runSupremePresetSearch returns extracted text and preset metadata", async () => {
@@ -205,7 +205,7 @@ test("runSupremePresetSearch returns extracted text and preset metadata", async 
   };
 
   try {
-    const result = await __test.runSupremePresetSearch();
+    const result = await core.runSupremePresetSearch();
 
     assert.equal(calls.length, 2);
     assert.equal(calls[0].options.method, "GET");
@@ -232,7 +232,7 @@ test("runSupremePresetSearch rejects non-html result response", async () => {
   };
 
   try {
-    await assert.rejects(() => __test.runSupremePresetSearch(), (error) => error.status === 415);
+    await assert.rejects(() => core.runSupremePresetSearch(), (error) => error.status === 415);
   } finally {
     global.fetch = originalFetch;
   }
