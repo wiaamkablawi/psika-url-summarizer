@@ -324,3 +324,14 @@ exports.searchSupremeLastWeekDecisions = functions.https.onRequest((req, res) =>
     preset: result.meta.preset,
   })),
 );
+
+exports.__test = {
+  MAX_RESPONSE_BYTES,
+  createHttpError,
+  isBlockedHostname,
+  extractTextFromHtml,
+  readResponseBodyWithLimit,
+  fetchWithTimeout,
+  runUrlIngest,
+  extractHiddenFields,
+};
