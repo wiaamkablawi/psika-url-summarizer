@@ -59,7 +59,8 @@
           const li = document.createElement("li");
           const sourceType = item?.source?.type || "unknown";
           const sourceValue = item?.source?.url || item?.source?.preset || "";
-          li.textContent = `${item.id} | ${item.status} | ${sourceType} ${sourceValue}`;
+          const durationMs = typeof item?.durationMs === "number" ? `${item.durationMs}ms` : "-";
+          li.textContent = `${item.id} | ${item.status} | ${sourceType} ${sourceValue} | ${durationMs}`;
           latestList.appendChild(li);
         }
       }

@@ -25,6 +25,7 @@ async function listLatestSummaries(limit) {
       contentType: data.contentType || null,
       error: data.error || null,
       chars: typeof data.text === "string" ? data.text.length : 0,
+      durationMs: typeof data.durationMs === "number" ? data.durationMs : null,
       fetchedAt: data.fetchedAt ? data.fetchedAt.toDate().toISOString() : null,
     };
   });

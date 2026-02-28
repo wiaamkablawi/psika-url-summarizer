@@ -22,7 +22,7 @@
 
 - `listLatestSummaries`:
   - מקבל `GET` עם `limit` אופציונלי.
-  - מחזיר את הסיכומים האחרונים מ־Firestore (כולל `status`, `source`, ו־`fetchedAt`).
+  - מחזיר את הסיכומים האחרונים מ־Firestore (כולל `status`, `source`, `durationMs`, ו־`fetchedAt`).
 
 ### Frontend לבדיקה ידנית
 
@@ -30,7 +30,7 @@
   - טופס שליחת URL ל־`/createSummaryFromUrl`.
   - כפתור להפעלת preset של העליון (`/searchSupremeLastWeekDecisions`).
   - כפתור לרענון רשימת סיכומים אחרונים (`/listLatestSummaries`).
-  - תצוגת סטטוס ו־JSON response.
+  - תצוגת סטטוס ו־JSON response (כולל זמני ריצה בסיסיים).
 
 ## סטטוס נוכחי (חשוב)
 

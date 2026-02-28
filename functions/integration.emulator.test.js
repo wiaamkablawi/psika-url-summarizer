@@ -50,6 +50,7 @@ test("createSummaryFromUrl writes done summary document", {skip: !shouldRun(), t
   assert.equal(body?.status, "done");
   assert.equal(typeof body?.id, "string");
   assert.equal(typeof body?.chars, "number");
+  assert.equal(typeof body?.durationMs, "number");
   assert.ok(body.chars > 0);
 
   const snapshot = await getSummaryDoc(body.id);
@@ -71,6 +72,7 @@ test("createSummaryFromUrl writes failed summary document", {skip: !shouldRun(),
   assert.equal(body?.ok, false);
   assert.equal(body?.status, "failed");
   assert.equal(typeof body?.id, "string");
+  assert.equal(typeof body?.durationMs, "number");
   assert.match(body?.error || "", /Invalid URL/);
 
   const snapshot = await getSummaryDoc(body.id);
@@ -88,6 +90,7 @@ test("listLatestSummaries returns recent docs", {skip: !shouldRun(), timeout: 30
   assert.equal(Array.isArray(body?.summaries), true);
   assert.ok(body.summaries.length >= 1);
   assert.equal(typeof body.summaries[0].id, "string");
+  assert.equal(typeof body.durationMs, "number");
 });
 
 test("listLatestSummaries rejects non-GET", {skip: !shouldRun(), timeout: 30000}, async () => {

@@ -147,7 +147,9 @@ test("handleRequest returns success payload and writes done document", async () 
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.ok, true);
   assert.equal(res.body.id, "doc-123");
+  assert.equal(typeof res.body.durationMs, "number");
   assert.equal(docs[0].status, "done");
+  assert.equal(typeof docs[0].durationMs, "number");
 });
 
 test("handleRequest writes failed document and returns error payload", async () => {
@@ -175,7 +177,9 @@ test("handleRequest writes failed document and returns error payload", async () 
   assert.equal(res.statusCode, 502);
   assert.equal(res.body.ok, false);
   assert.equal(res.body.id, "failed-1");
+  assert.equal(typeof res.body.durationMs, "number");
   assert.equal(writes[0].status, "failed");
+  assert.equal(typeof writes[0].durationMs, "number");
 });
 
 test("readResponseBodyWithLimit rejects payloads larger than MAX_RESPONSE_BYTES", async () => {
@@ -200,6 +204,7 @@ test("handleListSummariesRequest returns list payload for GET", async () => {
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.ok, true);
   assert.equal(res.body.count, 2);
+  assert.equal(typeof res.body.durationMs, "number");
 });
 
 test("handleListSummariesRequest validates method and config", async () => {
@@ -299,6 +304,7 @@ test("handleRequest uses failureSourceBuilder for failed documents", async () =>
   assert.equal(res.statusCode, 502);
   assert.equal(writes[0].source.type, "preset");
   assert.equal(writes[0].source.provider, "supreme.court.gov.il");
+  assert.equal(typeof writes[0].durationMs, "number");
 });
 
 test("handleRequest falls back to URL source when failureSourceBuilder throws", async () => {
@@ -327,6 +333,7 @@ test("handleRequest falls back to URL source when failureSourceBuilder throws", 
   assert.equal(res.statusCode, 500);
   assert.equal(writes[0].source.type, "url");
   assert.equal(writes[0].source.url, "https://fallback.example");
+  assert.equal(typeof writes[0].durationMs, "number");
 });
 
 test("handleRequest returns 500 when writeSummaryDoc is missing", async () => {
@@ -344,5 +351,6 @@ test("handleRequest returns 500 when writeSummaryDoc is missing", async () => {
   assert.equal(res.body.ok, false);
   assert.equal(res.body.id, null);
   assert.equal(res.body.status, "failed");
+  assert.equal(typeof res.body.durationMs, "undefined");
   assert.match(res.body.error, /writeSummaryDoc missing/);
 });
