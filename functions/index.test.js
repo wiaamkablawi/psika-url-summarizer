@@ -177,3 +177,63 @@ test("handleRequest writes failed document and returns error payload", async () 
   assert.equal(res.body.id, "failed-1");
   assert.equal(writes[0].status, "failed");
 });
+
+test("readResponseBodyWithLimit rejects payloads larger than MAX_RESPONSE_BYTES", async () => {
+  const tooLargeChunk = Buffer.alloc(__test.MAX_RESPONSE_BYTES + 1, "a");
+  const response = createResponse({chunks: [tooLargeChunk]});
+
+  await assert.rejects(() => __test.readResponseBodyWithLimit(response), (error) => error.status === 413);
+});
+
+test("runSupremePresetSearch returns extracted text and preset metadata", async () => {
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options = {}) => {
+    calls.push({url, options});
+
+    if (calls.length === 1) {
+      return createResponse({
+        contentType: "text/html; charset=utf-8",
+        chunks: [Buffer.from('<input type="hidden" name="__VIEWSTATE" value="abc" />')],
+      });
+    }
+
+    return createResponse({
+      contentType: "text/html; charset=utf-8",
+      chunks: [Buffer.from("<html><body>תוצאת החלטה</body></html>")],
+    });
+  };
+
+  try {
+    const result = await __test.runSupremePresetSearch();
+
+    assert.equal(calls.length, 2);
+    assert.equal(calls[0].options.method, "GET");
+    assert.equal(calls[1].options.method, "POST");
+    assert.match(calls[1].options.body, /__VIEWSTATE=abc/);
+    assert.equal(result.contentType, "text/html");
+    assert.equal(result.meta.preset, "last_week_decisions_over_2_pages");
+    assert.equal(result.text.includes("תוצאת החלטה"), true);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("runSupremePresetSearch rejects non-html result response", async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async (url, options = {}) => {
+    if (options.method === "POST") {
+      return createResponse({contentType: "application/json", chunks: [Buffer.from('{"ok":true}')]});
+    }
+    return createResponse({
+      contentType: "text/html; charset=utf-8",
+      chunks: [Buffer.from('<input type="hidden" name="__VIEWSTATE" value="abc" />')],
+    });
+  };
+
+  try {
+    await assert.rejects(() => __test.runSupremePresetSearch(), (error) => error.status === 415);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});

@@ -336,6 +336,7 @@ if (process.env.NODE_ENV === "test") {
     fetchWithTimeout,
     runUrlIngest,
     extractHiddenFields,
+    runSupremePresetSearch,
     handleRequest,
   };
 }
