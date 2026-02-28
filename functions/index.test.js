@@ -283,6 +283,36 @@ test("handleListSummariesRequest maps query failures", async () => {
   assert.equal(typeof res.body.durationMs, "number");
 });
 
+
+
+test("handleListSummariesRequest returns 400 for invalid limit", async () => {
+  const req = {method: "GET", query: {limit: "abc"}};
+  const res = createMockRes();
+
+  await core.handleListSummariesRequest(req, res, {listSummaries: async () => []});
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.body.ok, false);
+  assert.equal(res.body.errorType, "ValidationError");
+  assert.equal(typeof res.body.durationMs, "number");
+});
+
+test("handleListSummariesRequest maps query failures", async () => {
+  const req = {method: "GET", query: {limit: "4"}};
+  const res = createMockRes();
+
+  await core.handleListSummariesRequest(req, res, {
+    listSummaries: async () => {
+      throw core.createHttpError(503, "Firestore query failed", "FirestoreQueryError");
+    },
+  });
+
+  assert.equal(res.statusCode, 503);
+  assert.equal(res.body.ok, false);
+  assert.equal(res.body.errorType, "FirestoreQueryError");
+  assert.equal(typeof res.body.durationMs, "number");
+});
+
 test("runSupremePresetSearch returns extracted text and preset metadata", async () => {
   const originalFetch = global.fetch;
   const calls = [];

@@ -128,6 +128,49 @@ test("searchSupremeLastWeekDecisions writes failed summary document", {skip: !sh
   assert.equal(snapshot.get("errorType"), "ForcedFailure");
 });
 
+test("searchSupremeLastWeekDecisions writes done summary document", {skip: !shouldRun(), timeout: 30000}, async () => {
+  const {status, body} = await requestJson("/searchSupremeLastWeekDecisions", {
+    method: "POST",
+    payload: {__forceSuccess: true},
+  });
+
+  assert.equal(status, 200);
+  assert.equal(body?.ok, true);
+  assert.equal(body?.status, "done");
+  assert.equal(typeof body?.id, "string");
+  assert.equal(typeof body?.durationMs, "number");
+
+  const snapshot = await getSummaryDoc(body.id);
+  assert.equal(snapshot.get("status"), "done");
+  assert.equal(snapshot.get("source.type"), "preset");
+  assert.equal(snapshot.get("source.provider"), "supreme.court.gov.il");
+  assert.equal(snapshot.get("source.preset"), "last_week_decisions_over_2_pages");
+  assert.equal(typeof snapshot.get("durationMs"), "number");
+  assert.equal(snapshot.get("error") || null, null);
+});
+
+test("searchSupremeLastWeekDecisions writes failed summary document", {skip: !shouldRun(), timeout: 30000}, async () => {
+  const {status, body} = await requestJson("/searchSupremeLastWeekDecisions", {
+    method: "POST",
+    payload: {__forceFailure: true},
+  });
+
+  assert.equal(status, 502);
+  assert.equal(body?.ok, false);
+  assert.equal(body?.status, "failed");
+  assert.equal(body?.errorType, "ForcedFailure");
+  assert.equal(typeof body?.id, "string");
+  assert.equal(typeof body?.durationMs, "number");
+
+  const snapshot = await getSummaryDoc(body.id);
+  assert.equal(snapshot.get("status"), "failed");
+  assert.equal(snapshot.get("source.type"), "preset");
+  assert.equal(snapshot.get("source.provider"), "supreme.court.gov.il");
+  assert.equal(snapshot.get("source.preset"), "last_week_decisions_over_2_pages");
+  assert.equal(typeof snapshot.get("durationMs"), "number");
+  assert.match(snapshot.get("error") || "", /Forced supreme search failure/);
+});
+
 test("listLatestSummaries returns recent docs", {skip: !shouldRun(), timeout: 30000}, async () => {
   const {status, body} = await requestJson("/listLatestSummaries?limit=5");
 
