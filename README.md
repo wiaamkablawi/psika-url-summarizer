@@ -38,7 +38,7 @@
 ### דרישות
 
 - Node.js 20
-- Firebase CLI
+- Firebase CLI (או הרצה דרך `npx firebase-tools`)
 
 ### התקנה
 
@@ -62,11 +62,35 @@ firebase emulators:start --only firestore,functions
 
 > הערה: גם כשהחוקים חוסמים גישת לקוח, Cloud Functions שמריצות Admin SDK עדיין יכולות לכתוב ל־Firestore.
 
+### התנסות מלאה במערכת (MVP local)
+
+```bash
+firebase emulators:start --only hosting,functions,firestore
+```
+
+לאחר שהאמולטורים עולים:
+
+1. לפתוח דפדפן ב־`http://127.0.0.1:5000`.
+2. לשלוח URL דרך הטופס (`createSummaryFromUrl`) או להריץ חיפוש Preset.
+3. לראות תוצאה מיידית ב־UI וגם במסמכי `summaries` באמולטור Firestore.
+
 ### הרצת בדיקות
 
 ```bash
 npm --prefix functions run test
 ```
+
+### הרצת בדיקות Integration מול אמולטורים
+
+```bash
+cd functions
+npm run test:emulator
+```
+
+הסקריפט משתמש ב־`npx firebase-tools`, כך שלא חייבת להיות התקנת Firebase CLI גלובלית מראש.
+
+הפקודה מריצה את אמולטור Functions + Firestore ובודקת end-to-end את המסלול:
+HTTP request -> function -> write ל־Firestore (גם `done` וגם `failed`).
 
 ## תוכנית המשך (השלבים הבאים)
 
@@ -83,6 +107,9 @@ npm --prefix functions run test
 ├── firebase.json
 ├── firestore.rules
 ├── functions/
+│   ├── core.js
+│   ├── index.test.js
+│   ├── integration.emulator.test.js
 │   ├── index.js
 │   └── package.json
 └── public/

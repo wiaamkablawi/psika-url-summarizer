@@ -288,10 +288,23 @@ async function handleRequest(req, res, runner, sourceBuilder, options = {}) {
     const status = error.status || 500;
     const message = error.message || "Unexpected error";
 
+    const failureSourceBuilder = options.failureSourceBuilder;
+    let failureSource = {type: "url", url: req.body?.url || null};
+    if (typeof failureSourceBuilder === "function") {
+      try {
+        const builtSource = failureSourceBuilder(req);
+        if (builtSource && typeof builtSource === "object") {
+          failureSource = builtSource;
+        }
+      } catch (sourceError) {
+        console.error("Failed building failure source", sourceError);
+      }
+    }
+
     let docId = null;
     try {
       docId = await docWriter({
-        source: {type: "url", url: req.body?.url || null},
+        source: failureSource,
         status: "failed",
         fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
         error: message,

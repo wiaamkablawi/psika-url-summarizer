@@ -19,7 +19,13 @@ exports.createSummaryFromUrl = functions.https.onRequest((req, res) =>
     res,
     async (body) => core.runUrlIngest(typeof body.url === "string" ? body.url.trim() : ""),
     (result) => ({type: "url", url: result.normalizedUrl}),
-    {writeSummaryDoc},
+    {
+      writeSummaryDoc,
+      failureSourceBuilder: (request) => ({
+        type: "url",
+        url: typeof request?.body?.url === "string" ? request.body.url.trim() : null,
+      }),
+    },
   ),
 );
 
@@ -34,21 +40,29 @@ exports.searchSupremeLastWeekDecisions = functions.https.onRequest((req, res) =>
       url: result.sourceUrl,
       preset: result.meta.preset,
     }),
-    {writeSummaryDoc},
+    {
+      writeSummaryDoc,
+      failureSourceBuilder: () => ({
+        type: "preset",
+        provider: "supreme.court.gov.il",
+        url: core.SUPREME_SEARCH_URL,
+        preset: "last_week_decisions_over_2_pages",
+      }),
+    },
   ),
 );
 
 if (process.env.NODE_ENV === "test") {
   exports.__test = {
-    MAX_RESPONSE_BYTES,
-    createHttpError,
-    isBlockedHostname,
-    extractTextFromHtml,
-    readResponseBodyWithLimit,
-    fetchWithTimeout,
-    runUrlIngest,
-    extractHiddenFields,
-    runSupremePresetSearch,
-    handleRequest,
+    MAX_RESPONSE_BYTES: core.MAX_RESPONSE_BYTES,
+    createHttpError: core.createHttpError,
+    isBlockedHostname: core.isBlockedHostname,
+    extractTextFromHtml: core.extractTextFromHtml,
+    readResponseBodyWithLimit: core.readResponseBodyWithLimit,
+    fetchWithTimeout: core.fetchWithTimeout,
+    runUrlIngest: core.runUrlIngest,
+    extractHiddenFields: core.extractHiddenFields,
+    runSupremePresetSearch: core.runSupremePresetSearch,
+    handleRequest: core.handleRequest,
   };
 }
