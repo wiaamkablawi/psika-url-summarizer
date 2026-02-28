@@ -20,6 +20,10 @@
       {
         "source": "/searchSupremeLastWeekDecisions",
         "function": "searchSupremeLastWeekDecisions"
+      },
+      {
+        "source": "/listLatestSummaries",
+        "function": "listLatestSummaries"
       }
     ]
   }

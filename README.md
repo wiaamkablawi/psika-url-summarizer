@@ -20,11 +20,16 @@
   - טוען את עמוד החיפוש של העליון, אוסף hidden fields, ושולח בקשת חיפוש עם preset.
   - מחלץ טקסט מהתוצאות ושומר מסמך ב־`summaries`.
 
+- `listLatestSummaries`:
+  - מקבל `GET` עם `limit` אופציונלי.
+  - מחזיר את הסיכומים האחרונים מ־Firestore (כולל `status`, `source`, ו־`fetchedAt`).
+
 ### Frontend לבדיקה ידנית
 
 - עמוד סטטי ב־`public/index.html` עם:
   - טופס שליחת URL ל־`/createSummaryFromUrl`.
   - כפתור להפעלת preset של העליון (`/searchSupremeLastWeekDecisions`).
+  - כפתור לרענון רשימת סיכומים אחרונים (`/listLatestSummaries`).
   - תצוגת סטטוס ו־JSON response.
 
 ## סטטוס נוכחי (חשוב)
@@ -38,7 +43,7 @@
 ### דרישות
 
 - Node.js 20
-- Firebase CLI
+- Firebase CLI (או הרצה דרך `npx firebase-tools`)
 
 ### התקנה
 
@@ -62,11 +67,36 @@ firebase emulators:start --only firestore,functions
 
 > הערה: גם כשהחוקים חוסמים גישת לקוח, Cloud Functions שמריצות Admin SDK עדיין יכולות לכתוב ל־Firestore.
 
+### התנסות מלאה במערכת (MVP local)
+
+```bash
+firebase emulators:start --only hosting,functions,firestore
+```
+
+לאחר שהאמולטורים עולים:
+
+1. לפתוח דפדפן ב־`http://127.0.0.1:5000`.
+2. לשלוח URL דרך הטופס (`createSummaryFromUrl`) או להריץ חיפוש Preset.
+3. ללחוץ על "רענון סיכומים אחרונים" כדי לראות את הרשומות האחרונות מהשרת.
+4. לראות תוצאה מיידית ב־UI וגם במסמכי `summaries` באמולטור Firestore.
+
 ### הרצת בדיקות
 
 ```bash
 npm --prefix functions run test
 ```
+
+### הרצת בדיקות Integration מול אמולטורים
+
+```bash
+cd functions
+npm run test:emulator
+```
+
+הסקריפט משתמש ב־`npx firebase-tools`, כך שלא חייבת להיות התקנת Firebase CLI גלובלית מראש.
+
+הפקודה מריצה את אמולטור Functions + Firestore ובודקת end-to-end את המסלול:
+HTTP request -> function -> write/read מול Firestore.
 
 ## תוכנית המשך (השלבים הבאים)
 
@@ -83,6 +113,9 @@ npm --prefix functions run test
 ├── firebase.json
 ├── firestore.rules
 ├── functions/
+│   ├── core.js
+│   ├── index.test.js
+│   ├── integration.emulator.test.js
 │   ├── index.js
 │   └── package.json
 └── public/
