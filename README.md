@@ -68,6 +68,16 @@ firebase emulators:start --only firestore,functions
 npm --prefix functions run test
 ```
 
+### הרצת בדיקות Integration מול אמולטורים
+
+```bash
+cd functions
+npm run test:emulator
+```
+
+הפקודה מריצה את אמולטור Functions + Firestore ובודקת end-to-end את המסלול:
+HTTP request -> function -> write ל־Firestore (גם `done` וגם `failed`).
+
 ## תוכנית המשך (השלבים הבאים)
 
 1. **אבטחה (שלב הבא)**: לפתוח גישה מינימלית לפי auth/roles רק אם יידרש Client SDK.
@@ -83,6 +93,9 @@ npm --prefix functions run test
 ├── firebase.json
 ├── firestore.rules
 ├── functions/
+│   ├── core.js
+│   ├── index.test.js
+│   ├── integration.emulator.test.js
 │   ├── index.js
 │   └── package.json
 └── public/
