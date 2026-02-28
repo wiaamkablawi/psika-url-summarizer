@@ -12,10 +12,32 @@ function setCorsHeaders(res) {
   res.set("Access-Control-Allow-Headers", "Content-Type");
 }
 
-function createHttpError(status, message) {
+function createHttpError(status, message, errorType) {
   const error = new Error(message);
   error.status = status;
+  if (errorType) error.errorType = errorType;
   return error;
+}
+
+function classifyError(error) {
+  if (!error) return "UnknownError";
+  return error.errorType || error.name || "Error";
+}
+
+function logEndpointEvent(level, data) {
+  const logPayload = {
+    endpoint: data.endpoint || "unknown",
+    status: data.status || "unknown",
+    durationMs: typeof data.durationMs === "number" ? data.durationMs : null,
+    errorType: data.errorType || null,
+    ...data,
+  };
+
+  if (level === "error") {
+    console.error("endpoint_event", logPayload);
+    return;
+  }
+  console.log("endpoint_event", logPayload);
 }
 
 function isPrivateIpv4(hostname) {
@@ -24,22 +46,10 @@ function isPrivateIpv4(hostname) {
     return false;
   }
 
-  if (parts[0] === 10 || parts[0] === 127 || parts[0] === 0) {
-    return true;
-  }
-
-  if (parts[0] === 169 && parts[1] === 254) {
-    return true;
-  }
-
-  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) {
-    return true;
-  }
-
-  if (parts[0] === 192 && parts[1] === 168) {
-    return true;
-  }
-
+  if (parts[0] === 10 || parts[0] === 127 || parts[0] === 0) return true;
+  if (parts[0] === 169 && parts[1] === 254) return true;
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+  if (parts[0] === 192 && parts[1] === 168) return true;
   return false;
 }
 
@@ -87,7 +97,7 @@ async function readResponseBodyWithLimit(response) {
 
     totalBytes += value.byteLength;
     if (totalBytes > MAX_RESPONSE_BYTES) {
-      throw createHttpError(413, "Response body too large (max 2 MB)");
+      throw createHttpError(413, "Response body too large (max 2 MB)", "ResponseTooLarge");
     }
     chunks.push(value);
   }
@@ -102,41 +112,40 @@ async function fetchWithTimeout(url, options = {}) {
     return await fetch(url, {...options, signal: controller.signal});
   } catch (error) {
     if (error.name === "AbortError") {
-      throw createHttpError(504, "Fetch timed out after 15 seconds");
+      throw createHttpError(504, "Fetch timed out after 15 seconds", "FetchTimeout");
     }
-    throw createHttpError(502, `Fetch failed: ${error.message}`);
+    throw createHttpError(502, `Fetch failed: ${error.message}`, "FetchError");
   } finally {
     clearTimeout(timeout);
   }
 }
 
 async function runUrlIngest(url) {
-  if (!url) throw createHttpError(400, "Missing 'url' in request body");
-  if (url.length > MAX_URL_LENGTH) throw createHttpError(400, "URL too long (max 2048 chars)");
+  if (!url) throw createHttpError(400, "Missing 'url' in request body", "ValidationError");
+  if (url.length > MAX_URL_LENGTH) throw createHttpError(400, "URL too long (max 2048 chars)", "ValidationError");
 
   let parsedUrl;
   try {
     parsedUrl = new URL(url);
   } catch {
-    throw createHttpError(400, "Invalid URL");
+    throw createHttpError(400, "Invalid URL", "ValidationError");
   }
 
   if (!["http:", "https:"].includes(parsedUrl.protocol)) {
-    throw createHttpError(400, "Only http/https URLs are allowed");
+    throw createHttpError(400, "Only http/https URLs are allowed", "ValidationError");
   }
   if (isBlockedHostname(parsedUrl.hostname)) {
-    throw createHttpError(400, "URL host is not allowed");
+    throw createHttpError(400, "URL host is not allowed", "ValidationError");
   }
 
   const normalizedUrl = parsedUrl.toString();
   const response = await fetchWithTimeout(normalizedUrl, {method: "GET", redirect: "follow"});
-
-  if (!response.ok) throw createHttpError(502, `Upstream returned HTTP ${response.status}`);
+  if (!response.ok) throw createHttpError(502, `Upstream returned HTTP ${response.status}`, "UpstreamHttpError");
 
   const contentTypeHeader = response.headers.get("content-type") || "";
   const contentType = contentTypeHeader.split(";")[0].trim().toLowerCase();
   if (!["text/html", "text/plain"].includes(contentType)) {
-    throw createHttpError(415, `Unsupported content type: ${contentType || "unknown"}`);
+    throw createHttpError(415, `Unsupported content type: ${contentType || "unknown"}`, "UnsupportedContentType");
   }
 
   const rawText = await readResponseBodyWithLimit(response);
@@ -170,7 +179,7 @@ function formatDateDdMmYyyy(daysAgo) {
 async function runSupremePresetSearch() {
   const landing = await fetchWithTimeout(SUPREME_SEARCH_URL, {method: "GET", redirect: "follow"});
   if (!landing.ok) {
-    throw createHttpError(502, `Supreme search landing failed: ${landing.status}`);
+    throw createHttpError(502, `Supreme search landing failed: ${landing.status}`, "SupremeLandingError");
   }
 
   const html = await readResponseBodyWithLimit(landing);
@@ -180,31 +189,11 @@ async function runSupremePresetSearch() {
   const today = formatDateDdMmYyyy(0);
 
   const payload = new URLSearchParams({...hidden});
-  const dateFromCandidates = [
-    "ctl00$ContentPlaceHolder1$txtDateFrom",
-    "ctl00$MainContent$txtDateFrom",
-    "txtDateFrom",
-  ];
-  const dateToCandidates = [
-    "ctl00$ContentPlaceHolder1$txtDateTo",
-    "ctl00$MainContent$txtDateTo",
-    "txtDateTo",
-  ];
-  const minPagesCandidates = [
-    "ctl00$ContentPlaceHolder1$txtPagesFrom",
-    "ctl00$MainContent$txtPagesFrom",
-    "txtPagesFrom",
-  ];
-  const decisionTypeCandidates = [
-    "ctl00$ContentPlaceHolder1$txtFreeText",
-    "ctl00$MainContent$txtFreeText",
-    "txtFreeText",
-  ];
-  const searchButtonCandidates = [
-    "ctl00$ContentPlaceHolder1$btnSearch",
-    "ctl00$MainContent$btnSearch",
-    "btnSearch",
-  ];
+  const dateFromCandidates = ["ctl00$ContentPlaceHolder1$txtDateFrom", "ctl00$MainContent$txtDateFrom", "txtDateFrom"];
+  const dateToCandidates = ["ctl00$ContentPlaceHolder1$txtDateTo", "ctl00$MainContent$txtDateTo", "txtDateTo"];
+  const minPagesCandidates = ["ctl00$ContentPlaceHolder1$txtPagesFrom", "ctl00$MainContent$txtPagesFrom", "txtPagesFrom"];
+  const decisionTypeCandidates = ["ctl00$ContentPlaceHolder1$txtFreeText", "ctl00$MainContent$txtFreeText", "txtFreeText"];
+  const searchButtonCandidates = ["ctl00$ContentPlaceHolder1$btnSearch", "ctl00$MainContent$btnSearch", "btnSearch"];
 
   for (const key of dateFromCandidates) payload.set(key, lastWeek);
   for (const key of dateToCandidates) payload.set(key, today);
@@ -217,26 +206,26 @@ async function runSupremePresetSearch() {
     redirect: "follow",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
-      "Origin": "https://supreme.court.gov.il",
-      "Referer": SUPREME_SEARCH_URL,
+      Origin: "https://supreme.court.gov.il",
+      Referer: SUPREME_SEARCH_URL,
     },
     body: payload.toString(),
   });
 
   if (!resultRes.ok) {
-    throw createHttpError(502, `Supreme search request failed: ${resultRes.status}`);
+    throw createHttpError(502, `Supreme search request failed: ${resultRes.status}`, "SupremeSearchError");
   }
 
   const contentType = (resultRes.headers.get("content-type") || "").split(";")[0].toLowerCase();
   if (!contentType.includes("text/html")) {
-    throw createHttpError(415, `Unexpected response from supreme search: ${contentType || "unknown"}`);
+    throw createHttpError(415, `Unexpected response from supreme search: ${contentType || "unknown"}`, "UnsupportedContentType");
   }
 
   const resultHtml = await readResponseBodyWithLimit(resultRes);
   const resultText = extractTextFromHtml(resultHtml).slice(0, MAX_TEXT_CHARS);
 
   if (!resultText) {
-    throw createHttpError(502, "Supreme search returned empty results text");
+    throw createHttpError(502, "Supreme search returned empty results text", "SupremeEmptyResult");
   }
 
   return {
@@ -252,16 +241,39 @@ async function runSupremePresetSearch() {
   };
 }
 
+function parseListLimit(rawLimit) {
+  if (typeof rawLimit === "undefined") return 20;
+  if (Array.isArray(rawLimit)) {
+    throw createHttpError(400, "Query 'limit' must be a single integer between 1 and 50", "ValidationError");
+  }
+  const normalized = String(rawLimit).trim();
+  if (!/^\d+$/.test(normalized)) {
+    throw createHttpError(400, "Query 'limit' must be a single integer between 1 and 50", "ValidationError");
+  }
+
+  const limit = Number(normalized);
+  if (!Number.isInteger(limit) || limit < 1 || limit > 50) {
+    throw createHttpError(400, "Query 'limit' must be a single integer between 1 and 50", "ValidationError");
+  }
+  return limit;
+}
+
 async function handleRequest(req, res, runner, sourceBuilder, options = {}) {
   setCorsHeaders(res);
   if (req.method === "OPTIONS") return res.status(204).send("");
   if (req.method !== "POST") return res.status(405).json({ok: false, error: "Method not allowed"});
 
+  const endpoint = options.endpointName || req.path || req.url || "unknown";
   const docWriter = options.writeSummaryDoc;
   const startedAtMs = Date.now();
-  const requestPath = req.path || req.url || "unknown";
+
   if (typeof docWriter !== "function") {
-    console.error("Server misconfiguration: writeSummaryDoc missing");
+    logEndpointEvent("error", {
+      endpoint,
+      status: "failed",
+      errorType: "MisconfigurationError",
+      message: "Server misconfiguration: writeSummaryDoc missing",
+    });
     return res.status(500).json({
       ok: false,
       error: "Server misconfiguration: writeSummaryDoc missing",
@@ -270,7 +282,7 @@ async function handleRequest(req, res, runner, sourceBuilder, options = {}) {
     });
   }
 
-  console.log("handleRequest start", {runner: runner.name, path: requestPath});
+  logEndpointEvent("info", {endpoint, status: "started"});
 
   try {
     const result = await runner(req.body || {});
@@ -286,36 +298,29 @@ async function handleRequest(req, res, runner, sourceBuilder, options = {}) {
     if (result.meta) doc.meta = result.meta;
 
     const docId = await docWriter(doc);
-    console.log("handleRequest complete", {runner: runner.name, path: requestPath, docId, status: "done", durationMs});
+    logEndpointEvent("info", {endpoint, status: "done", durationMs, errorType: null, docId});
     return res.status(200).json({ok: true, id: docId, status: "done", chars: result.text.length, durationMs});
   } catch (error) {
     const status = error.status || 500;
     const message = error.message || "Unexpected error";
+    const errorType = classifyError(error);
     const durationMs = Date.now() - startedAtMs;
 
-    const failureSourceBuilder = options.failureSourceBuilder;
     let failureSource = {type: "url", url: req.body?.url || null};
-    if (typeof failureSourceBuilder === "function") {
+    if (typeof options.failureSourceBuilder === "function") {
       try {
-        const builtSource = failureSourceBuilder(req);
+        const builtSource = options.failureSourceBuilder(req);
         if (builtSource && typeof builtSource === "object") {
           failureSource = builtSource;
         }
       } catch (sourceError) {
-        console.error("Failed building failure source", sourceError);
-      }
-    }
-
-    const failureSourceBuilder = options.failureSourceBuilder;
-    let failureSource = {type: "url", url: req.body?.url || null};
-    if (typeof failureSourceBuilder === "function") {
-      try {
-        const builtSource = failureSourceBuilder(req);
-        if (builtSource && typeof builtSource === "object") {
-          failureSource = builtSource;
-        }
-      } catch (sourceError) {
-        console.error("Failed building failure source", sourceError);
+        logEndpointEvent("error", {
+          endpoint,
+          status: "failed",
+          errorType: classifyError(sourceError),
+          durationMs,
+          message: "Failed building failure source",
+        });
       }
     }
 
@@ -328,60 +333,53 @@ async function handleRequest(req, res, runner, sourceBuilder, options = {}) {
         error: message,
         durationMs,
       });
-      console.log("handleRequest complete", {runner: runner.name, path: requestPath, docId, status: "failed", error: message, durationMs});
     } catch (writeError) {
-      console.error("Failed writing failed summary doc", writeError);
+      logEndpointEvent("error", {
+        endpoint,
+        status: "failed",
+        errorType: classifyError(writeError),
+        durationMs,
+        message: "Failed writing failed summary doc",
+      });
     }
 
-    return res.status(status).json({ok: false, error: message, id: docId, status: "failed", durationMs});
+    logEndpointEvent("error", {endpoint, status: "failed", durationMs, errorType, error: message, docId});
+    return res.status(status).json({ok: false, error: message, errorType, id: docId, status: "failed", durationMs});
   }
 }
-
 
 async function handleListSummariesRequest(req, res, options = {}) {
   setCorsHeaders(res);
   if (req.method === "OPTIONS") return res.status(204).send("");
   if (req.method !== "GET") return res.status(405).json({ok: false, error: "Method not allowed"});
 
+  const endpoint = options.endpointName || req.path || req.url || "unknown";
   const listSummaries = options.listSummaries;
   const startedAtMs = Date.now();
+
   if (typeof listSummaries !== "function") {
-    console.error("Server misconfiguration: listSummaries missing");
-    return res.status(500).json({ok: false, error: "Server misconfiguration: listSummaries missing"});
+    logEndpointEvent("error", {
+      endpoint,
+      status: "failed",
+      errorType: "MisconfigurationError",
+      message: "Server misconfiguration: listSummaries missing",
+    });
+    return res.status(500).json({ok: false, error: "Server misconfiguration: listSummaries missing", errorType: "MisconfigurationError"});
   }
 
   try {
-    const limit = Number(req.query?.limit);
-    const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 50) : 20;
+    const safeLimit = parseListLimit(req.query?.limit);
     const summaries = await listSummaries(safeLimit);
     const durationMs = Date.now() - startedAtMs;
+    logEndpointEvent("info", {endpoint, status: "done", durationMs, errorType: null, limit: safeLimit, count: summaries.length});
     return res.status(200).json({ok: true, count: summaries.length, summaries, durationMs});
   } catch (error) {
+    const durationMs = Date.now() - startedAtMs;
+    const status = error.status || 500;
+    const errorType = classifyError(error);
     const message = error.message || "Unexpected error";
-    return res.status(500).json({ok: false, error: message});
-  }
-}
-
-
-async function handleListSummariesRequest(req, res, options = {}) {
-  setCorsHeaders(res);
-  if (req.method === "OPTIONS") return res.status(204).send("");
-  if (req.method !== "GET") return res.status(405).json({ok: false, error: "Method not allowed"});
-
-  const listSummaries = options.listSummaries;
-  if (typeof listSummaries !== "function") {
-    console.error("Server misconfiguration: listSummaries missing");
-    return res.status(500).json({ok: false, error: "Server misconfiguration: listSummaries missing"});
-  }
-
-  try {
-    const limit = Number(req.query?.limit);
-    const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 50) : 20;
-    const summaries = await listSummaries(safeLimit);
-    return res.status(200).json({ok: true, count: summaries.length, summaries});
-  } catch (error) {
-    const message = error.message || "Unexpected error";
-    return res.status(500).json({ok: false, error: message});
+    logEndpointEvent("error", {endpoint, status: "failed", durationMs, errorType, error: message});
+    return res.status(status).json({ok: false, error: message, errorType, durationMs});
   }
 }
 
@@ -390,6 +388,8 @@ module.exports = {
   SUPREME_SEARCH_URL,
   setCorsHeaders,
   createHttpError,
+  classifyError,
+  logEndpointEvent,
   isBlockedHostname,
   extractTextFromHtml,
   readResponseBodyWithLimit,
@@ -397,6 +397,7 @@ module.exports = {
   runUrlIngest,
   extractHiddenFields,
   runSupremePresetSearch,
+  parseListLimit,
   handleRequest,
   handleListSummariesRequest,
 };
