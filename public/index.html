@@ -9,9 +9,14 @@
       form, .preset, .latest { display: grid; gap: 0.75rem; margin-bottom: 1rem; }
       input, button { padding: 0.6rem; font-size: 1rem; }
       pre { background: #f4f4f4; padding: 1rem; overflow-x: auto; }
-      .status { font-weight: bold; }
+      .status { font-weight: bold; min-height: 1.5rem; }
+      .status.loading { color: #1a4f9e; }
+      .status.success { color: #1f7a33; }
+      .status.error { color: #b42318; }
       ul { background: #f9f9f9; padding: 0.75rem 1rem; margin: 0; }
       li { margin-bottom: 0.4rem; }
+      .hint { color: #666; font-size: 0.9rem; }
+      button:disabled { opacity: 0.6; cursor: wait; }
     </style>
   </head>
   <body>
@@ -19,7 +24,7 @@
     <form id="summary-form">
       <label for="url">URL</label>
       <input id="url" name="url" type="url" placeholder="https://example.com" required />
-      <button type="submit">שלח URL</button>
+      <button id="submit-url-btn" type="submit">שלח URL</button>
     </form>
 
     <div class="preset">
@@ -27,11 +32,10 @@
       <button id="supreme-btn" type="button">שבוע אחרון + החלטות מעל 2 עמודים</button>
     </div>
 
-
-
     <div class="latest">
       <h2>סיכומים אחרונים</h2>
       <button id="latest-btn" type="button">רענון סיכומים אחרונים</button>
+      <p class="hint">הרשימה מתרעננת אוטומטית אחרי פעולת ingest/search מוצלחת.</p>
       <ul id="latest-list"></ul>
     </div>
 
@@ -44,9 +48,30 @@
       const responseEl = document.getElementById("response");
       const supremeBtn = document.getElementById("supreme-btn");
       const latestBtn = document.getElementById("latest-btn");
+      const submitUrlBtn = document.getElementById("submit-url-btn");
       const latestList = document.getElementById("latest-list");
 
+      function setStatus(message, mode = "loading") {
+        statusEl.classList.remove("loading", "success", "error");
+        statusEl.classList.add(mode);
+        statusEl.textContent = message;
+      }
 
+      function setBusy(isBusy) {
+        submitUrlBtn.disabled = isBusy;
+        supremeBtn.disabled = isBusy;
+        latestBtn.disabled = isBusy;
+      }
+
+      function humanizeError(errorType, fallbackMessage) {
+        const map = {
+          ValidationError: "הקלט לא תקין. בדקו את הערכים ונסו שוב.",
+          FetchTimeout: "השרת החיצוני איטי מדי. נסו שוב בעוד רגע.",
+          FirestoreQueryError: "לא הצלחנו להביא נתונים מהמסד כרגע. נסו שוב בעוד רגע.",
+          ForcedFailure: "בדיקת כשל יזומה הושלמה (לצורכי אינטגרציה).",
+        };
+        return map[errorType] || fallbackMessage || "אירעה שגיאה לא צפויה.";
+      }
 
       function renderLatestSummaries(items) {
         latestList.innerHTML = "";
@@ -65,6 +90,15 @@
         }
       }
 
+      async function fetchLatestSummaries() {
+        const res = await fetch("/listLatestSummaries?limit=10", {method: "GET"});
+        const data = await res.json();
+        if (data.ok) {
+          renderLatestSummaries(data.summaries);
+        }
+        return {res, data};
+      }
+
       async function postJson(path, payload) {
         const res = await fetch(path, {
           method: "POST",
@@ -72,50 +106,70 @@
           body: JSON.stringify(payload || {}),
         });
         const data = await res.json();
-        statusEl.textContent = `HTTP ${res.status} - ${data.ok ? "success" : "error"}`;
         responseEl.textContent = JSON.stringify(data, null, 2);
+
+        if (data.ok) {
+          setStatus(`הפעולה הצליחה (HTTP ${res.status})`, "success");
+          await fetchLatestSummaries();
+        } else {
+          const friendly = humanizeError(data.errorType, data.error);
+          setStatus(`שגיאה: ${friendly} (HTTP ${res.status})`, "error");
+        }
       }
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
-        statusEl.textContent = "שולח URL...";
+        setBusy(true);
+        setStatus("שולח URL...", "loading");
         responseEl.textContent = "{}";
         const url = document.getElementById("url").value;
         try {
           await postJson("/createSummaryFromUrl", {url});
         } catch (error) {
-          statusEl.textContent = "Request failed";
+          setStatus("תקלה בחיבור לרשת. בדקו שהאמולטור רץ.", "error");
           responseEl.textContent = JSON.stringify({ok: false, error: error.message}, null, 2);
+        } finally {
+          setBusy(false);
         }
       });
 
       supremeBtn.addEventListener("click", async () => {
-        statusEl.textContent = "מריץ חיפוש בעליון...";
+        setBusy(true);
+        setStatus("מריץ חיפוש בעליון...", "loading");
         responseEl.textContent = "{}";
         try {
           await postJson("/searchSupremeLastWeekDecisions", {});
         } catch (error) {
-          statusEl.textContent = "Request failed";
+          setStatus("תקלה בחיבור לרשת. בדקו שהאמולטור רץ.", "error");
           responseEl.textContent = JSON.stringify({ok: false, error: error.message}, null, 2);
+        } finally {
+          setBusy(false);
         }
       });
 
       latestBtn.addEventListener("click", async () => {
-        statusEl.textContent = "טוען סיכומים אחרונים...";
+        setBusy(true);
+        setStatus("טוען סיכומים אחרונים...", "loading");
         try {
-          const res = await fetch("/listLatestSummaries?limit=10", {method: "GET"});
-          const data = await res.json();
-          statusEl.textContent = `HTTP ${res.status} - ${data.ok ? "success" : "error"}`;
+          const {res, data} = await fetchLatestSummaries();
           responseEl.textContent = JSON.stringify(data, null, 2);
           if (data.ok) {
-            renderLatestSummaries(data.summaries);
+            setStatus(`הרשימה עודכנה (HTTP ${res.status})`, "success");
+          } else {
+            const friendly = humanizeError(data.errorType, data.error);
+            setStatus(`שגיאה: ${friendly} (HTTP ${res.status})`, "error");
           }
         } catch (error) {
-          statusEl.textContent = "Request failed";
+          setStatus("תקלה בחיבור לרשת. בדקו שהאמולטור רץ.", "error");
           responseEl.textContent = JSON.stringify({ok: false, error: error.message}, null, 2);
+        } finally {
+          setBusy(false);
         }
       });
 
+      fetchLatestSummaries().catch(() => {
+        renderLatestSummaries([]);
+      });
     </script>
   </body>
 </html>

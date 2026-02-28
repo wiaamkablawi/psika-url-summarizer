@@ -71,6 +71,7 @@ test("createSummaryFromUrl writes failed summary document", {skip: !shouldRun(),
   assert.equal(status, 400);
   assert.equal(body?.ok, false);
   assert.equal(body?.status, "failed");
+  assert.equal(body?.errorType, "ValidationError");
   assert.equal(typeof body?.id, "string");
   assert.equal(typeof body?.durationMs, "number");
   assert.match(body?.error || "", /Invalid URL/);
@@ -80,6 +81,51 @@ test("createSummaryFromUrl writes failed summary document", {skip: !shouldRun(),
   assert.equal(snapshot.get("source.type"), "url");
   assert.equal(snapshot.get("source.url"), "notaurl");
   assert.match(snapshot.get("error"), /Invalid URL/);
+  assert.equal(snapshot.get("errorType"), "ValidationError");
+});
+
+test("searchSupremeLastWeekDecisions writes done summary document", {skip: !shouldRun(), timeout: 30000}, async () => {
+  const {status, body} = await requestJson("/searchSupremeLastWeekDecisions", {
+    method: "POST",
+    payload: {__forceSuccess: true},
+  });
+
+  assert.equal(status, 200);
+  assert.equal(body?.ok, true);
+  assert.equal(body?.status, "done");
+  assert.equal(typeof body?.id, "string");
+  assert.equal(typeof body?.durationMs, "number");
+
+  const snapshot = await getSummaryDoc(body.id);
+  assert.equal(snapshot.get("status"), "done");
+  assert.equal(snapshot.get("source.type"), "preset");
+  assert.equal(snapshot.get("source.provider"), "supreme.court.gov.il");
+  assert.equal(snapshot.get("source.preset"), "last_week_decisions_over_2_pages");
+  assert.equal(typeof snapshot.get("durationMs"), "number");
+  assert.equal(snapshot.get("error") || null, null);
+});
+
+test("searchSupremeLastWeekDecisions writes failed summary document", {skip: !shouldRun(), timeout: 30000}, async () => {
+  const {status, body} = await requestJson("/searchSupremeLastWeekDecisions", {
+    method: "POST",
+    payload: {__forceFailure: true},
+  });
+
+  assert.equal(status, 502);
+  assert.equal(body?.ok, false);
+  assert.equal(body?.status, "failed");
+  assert.equal(body?.errorType, "ForcedFailure");
+  assert.equal(typeof body?.id, "string");
+  assert.equal(typeof body?.durationMs, "number");
+
+  const snapshot = await getSummaryDoc(body.id);
+  assert.equal(snapshot.get("status"), "failed");
+  assert.equal(snapshot.get("source.type"), "preset");
+  assert.equal(snapshot.get("source.provider"), "supreme.court.gov.il");
+  assert.equal(snapshot.get("source.preset"), "last_week_decisions_over_2_pages");
+  assert.equal(typeof snapshot.get("durationMs"), "number");
+  assert.match(snapshot.get("error") || "", /Forced supreme search failure/);
+  assert.equal(snapshot.get("errorType"), "ForcedFailure");
 });
 
 test("listLatestSummaries returns recent docs", {skip: !shouldRun(), timeout: 30000}, async () => {
@@ -91,6 +137,22 @@ test("listLatestSummaries returns recent docs", {skip: !shouldRun(), timeout: 30
   assert.ok(body.summaries.length >= 1);
   assert.equal(typeof body.summaries[0].id, "string");
   assert.equal(typeof body.durationMs, "number");
+});
+
+test("listLatestSummaries validates limit strictly", {skip: !shouldRun(), timeout: 30000}, async () => {
+  const badLimit1 = await requestJson("/listLatestSummaries?limit=0");
+  assert.equal(badLimit1.status, 400);
+  assert.equal(badLimit1.body?.ok, false);
+  assert.equal(badLimit1.body?.errorType, "ValidationError");
+
+  const badLimit2 = await requestJson("/listLatestSummaries?limit=foo");
+  assert.equal(badLimit2.status, 400);
+  assert.equal(badLimit2.body?.ok, false);
+  assert.equal(badLimit2.body?.errorType, "ValidationError");
+
+  const maxLimit = await requestJson("/listLatestSummaries?limit=50");
+  assert.equal(maxLimit.status, 200);
+  assert.equal(maxLimit.body?.ok, true);
 });
 
 test("listLatestSummaries rejects non-GET", {skip: !shouldRun(), timeout: 30000}, async () => {
