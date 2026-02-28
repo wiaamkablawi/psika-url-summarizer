@@ -40,15 +40,15 @@ exports.searchSupremeLastWeekDecisions = functions.https.onRequest((req, res) =>
 
 if (process.env.NODE_ENV === "test") {
   exports.__test = {
-    MAX_RESPONSE_BYTES,
-    createHttpError,
-    isBlockedHostname,
-    extractTextFromHtml,
-    readResponseBodyWithLimit,
-    fetchWithTimeout,
-    runUrlIngest,
-    extractHiddenFields,
-    runSupremePresetSearch,
-    handleRequest,
+    MAX_RESPONSE_BYTES: core.MAX_RESPONSE_BYTES,
+    createHttpError: core.createHttpError,
+    isBlockedHostname: core.isBlockedHostname,
+    extractTextFromHtml: core.extractTextFromHtml,
+    readResponseBodyWithLimit: core.readResponseBodyWithLimit,
+    fetchWithTimeout: core.fetchWithTimeout,
+    runUrlIngest: core.runUrlIngest,
+    extractHiddenFields: core.extractHiddenFields,
+    runSupremePresetSearch: core.runSupremePresetSearch,
+    handleRequest: core.handleRequest,
   };
 }
