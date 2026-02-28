@@ -309,8 +309,15 @@ test("runSupremePresetSearch returns extracted text and preset metadata", async 
     assert.equal(calls[0].options.method, "GET");
     assert.equal(calls[1].options.method, "POST");
     assert.match(calls[1].options.body, /__VIEWSTATE=abc/);
+    assert.match(calls[1].options.body, /%D7%A9%D7%91%D7%95%D7%A2\+%D7%90%D7%97%D7%A8%D7%95%D7%9F/);
+    assert.match(calls[1].options.body, /%D7%9E%D7%94%D7%95%D7%AA%D7%99%D7%95%D7%AA\+%D7%91%D7%9C%D7%91%D7%93/);
+    assert.match(calls[1].options.body, /%D7%A4%D7%9C%D7%99%D7%9C%D7%99/);
+    assert.match(calls[1].options.body, /2/);
     assert.equal(result.contentType, "text/html");
-    assert.equal(result.meta.preset, "last_week_decisions_over_2_pages");
+    assert.equal(result.meta.preset, "last_week_material_only_criminal_over_2_pages");
+    assert.equal(result.meta.minPages, 2);
+    assert.equal(result.meta.materiality, "מהותיות בלבד");
+    assert.equal(result.meta.section, "פלילי");
     assert.equal(result.text.includes("תוצאת החלטה"), true);
   } finally {
     global.fetch = originalFetch;
@@ -357,7 +364,7 @@ test("handleRequest uses failureSourceBuilder for failed documents", async () =>
       failureSourceBuilder: () => ({
         type: "preset",
         provider: "supreme.court.gov.il",
-        preset: "last_week_decisions_over_2_pages",
+        preset: "last_week_material_only_criminal_over_2_pages",
       }),
     },
   );

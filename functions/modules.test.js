@@ -45,7 +45,7 @@ test("createSupremeSearchRunner supports test-mode force success/failure", async
 
   const success = await runner({__forceSuccess: true});
   assert.equal(success.sourceUrl, core.SUPREME_SEARCH_URL);
-  assert.equal(success.meta.preset, "last_week_decisions_over_2_pages");
+  assert.equal(success.meta.preset, "last_week_material_only_criminal_over_2_pages");
 
   await assert.rejects(() => runner({__forceFailure: true}), (error) => error.errorType === "ForcedFailure");
 

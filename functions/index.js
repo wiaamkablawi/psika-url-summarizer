@@ -49,7 +49,7 @@ exports.searchSupremeLastWeekDecisions = functions.https.onRequest((req, res) =>
         type: "preset",
         provider: "supreme.court.gov.il",
         url: core.SUPREME_SEARCH_URL,
-        preset: "last_week_decisions_over_2_pages",
+        preset: "last_week_material_only_criminal_over_2_pages",
       }),
     },
   ),

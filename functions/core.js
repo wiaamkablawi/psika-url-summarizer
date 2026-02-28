@@ -191,14 +191,18 @@ async function runSupremePresetSearch() {
   const payload = new URLSearchParams({...hidden});
   const dateFromCandidates = ["ctl00$ContentPlaceHolder1$txtDateFrom", "ctl00$MainContent$txtDateFrom", "txtDateFrom"];
   const dateToCandidates = ["ctl00$ContentPlaceHolder1$txtDateTo", "ctl00$MainContent$txtDateTo", "txtDateTo"];
+  const dateRangeCandidates = ["ctl00$ContentPlaceHolder1$ddlDateRange", "ctl00$MainContent$ddlDateRange", "ddlDateRange"];
   const minPagesCandidates = ["ctl00$ContentPlaceHolder1$txtPagesFrom", "ctl00$MainContent$txtPagesFrom", "txtPagesFrom"];
-  const decisionTypeCandidates = ["ctl00$ContentPlaceHolder1$txtFreeText", "ctl00$MainContent$txtFreeText", "txtFreeText"];
+  const materialityCandidates = ["ctl00$ContentPlaceHolder1$ddlMateriality", "ctl00$MainContent$ddlMateriality", "ddlMateriality"];
+  const sectionCandidates = ["ctl00$ContentPlaceHolder1$ddlSection", "ctl00$MainContent$ddlSection", "ddlSection"];
   const searchButtonCandidates = ["ctl00$ContentPlaceHolder1$btnSearch", "ctl00$MainContent$btnSearch", "btnSearch"];
 
   for (const key of dateFromCandidates) payload.set(key, lastWeek);
   for (const key of dateToCandidates) payload.set(key, today);
-  for (const key of minPagesCandidates) payload.set(key, "3");
-  for (const key of decisionTypeCandidates) payload.set(key, "החלטה");
+  for (const key of dateRangeCandidates) payload.set(key, "שבוע אחרון");
+  for (const key of minPagesCandidates) payload.set(key, "2");
+  for (const key of materialityCandidates) payload.set(key, "מהותיות בלבד");
+  for (const key of sectionCandidates) payload.set(key, "פלילי");
   for (const key of searchButtonCandidates) payload.set(key, "חפש");
 
   const resultRes = await fetchWithTimeout(SUPREME_SEARCH_URL, {
@@ -233,10 +237,12 @@ async function runSupremePresetSearch() {
     contentType: "text/html",
     text: resultText,
     meta: {
-      preset: "last_week_decisions_over_2_pages",
+      preset: "last_week_material_only_criminal_over_2_pages",
       dateFrom: lastWeek,
       dateTo: today,
-      minPages: 3,
+      minPages: 2,
+      materiality: "מהותיות בלבד",
+      section: "פלילי",
     },
   };
 }

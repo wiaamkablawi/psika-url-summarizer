@@ -100,7 +100,7 @@ test("searchSupremeLastWeekDecisions writes done summary document", {skip: !shou
   assert.equal(snapshot.get("status"), "done");
   assert.equal(snapshot.get("source.type"), "preset");
   assert.equal(snapshot.get("source.provider"), "supreme.court.gov.il");
-  assert.equal(snapshot.get("source.preset"), "last_week_decisions_over_2_pages");
+  assert.equal(snapshot.get("source.preset"), "last_week_material_only_criminal_over_2_pages");
   assert.equal(typeof snapshot.get("durationMs"), "number");
   assert.equal(snapshot.get("error") || null, null);
 });
@@ -122,7 +122,7 @@ test("searchSupremeLastWeekDecisions writes failed summary document", {skip: !sh
   assert.equal(snapshot.get("status"), "failed");
   assert.equal(snapshot.get("source.type"), "preset");
   assert.equal(snapshot.get("source.provider"), "supreme.court.gov.il");
-  assert.equal(snapshot.get("source.preset"), "last_week_decisions_over_2_pages");
+  assert.equal(snapshot.get("source.preset"), "last_week_material_only_criminal_over_2_pages");
   assert.equal(typeof snapshot.get("durationMs"), "number");
   assert.match(snapshot.get("error") || "", /Forced supreme search failure/);
   assert.equal(snapshot.get("errorType"), "ForcedFailure");
