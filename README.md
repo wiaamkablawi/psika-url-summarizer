@@ -116,3 +116,8 @@ npm --prefix functions run test:emulator
 └── public/
     └── index.html
 ```
+
+## Maintenance Notes
+
+- Repository reset commit was reverted to restore all source files.
+- If you need a fresh start, create a new branch and remove files there instead of deleting the default branch history.
