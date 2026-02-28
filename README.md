@@ -38,7 +38,7 @@
 ### דרישות
 
 - Node.js 20
-- Firebase CLI
+- Firebase CLI (או הרצה דרך `npx firebase-tools`)
 
 ### התקנה
 
@@ -74,6 +74,8 @@ npm --prefix functions run test
 cd functions
 npm run test:emulator
 ```
+
+הסקריפט משתמש ב־`npx firebase-tools`, כך שלא חייבת להיות התקנת Firebase CLI גלובלית מראש.
 
 הפקודה מריצה את אמולטור Functions + Firestore ובודקת end-to-end את המסלול:
 HTTP request -> function -> write ל־Firestore (גם `done` וגם `failed`).

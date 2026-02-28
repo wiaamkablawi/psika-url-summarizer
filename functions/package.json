@@ -8,7 +8,7 @@
   "scripts": {
     "lint": "echo 'No lint configured'",
     "test": "NODE_ENV=test node --test",
-    "test:emulator": "firebase emulators:exec --project demo-psika --only functions,firestore \"RUN_EMULATOR_TESTS=1 NODE_ENV=test node --test integration.emulator.test.js\"",
+    "test:emulator": "npx firebase-tools emulators:exec --project demo-psika --only functions,firestore \"RUN_EMULATOR_TESTS=1 NODE_ENV=test node --test integration.emulator.test.js\"",
     "serve": "firebase emulators:start --only functions",
     "shell": "firebase functions:shell",
     "start": "npm run shell",
