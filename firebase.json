@@ -11,6 +11,10 @@
       {
         "source": "/autoSupremeSearch",
         "function": "autoSupremeSearch"
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
       }
     ],
     "ignore": [
