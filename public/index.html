@@ -91,37 +91,31 @@
     <main>
       <h1>חיפוש מתקדם - בית המשפט העליון</h1>
       <p>
-        לחיצה על הכפתור תפתח לשונית חדשה ותעבור לאתר החיפוש של בית המשפט העליון.
+        לחיצה על הכפתור תפתח לשונית חדשה עם תוצאות חיפוש אוטומטי (ללא הזנה ידנית של שדות).
       </p>
 
       <div class="actions">
-        <button id="open-search">פתח Chrome לאתר</button>
+        <button id="open-search">הפעל חיפוש אוטומטי</button>
       </div>
 
-      <p class="note" id="manual-note" hidden>
-        חשוב: הקוד פותח את מסך החיפוש בלבד. את בחירת השדות ולחיצה על "חיפוש" מבצעים ידנית במסך שנפתח.
-      </p>
-
-      <section aria-label="צעד 2">
-        <h2>צעד 2 - מה למלא במסך החיפוש שנפתח</h2>
+      <section aria-label="סטטוס אוטומציה">
+        <h2>מה המערכת מבצעת אוטומטית</h2>
         <ol>
-          <li>ברשימה הנפתחת של תאריך המסמך יש לבחור: <strong>שבוע אחרון</strong>.</li>
-          <li>בשדה <strong>מהותי / טכני</strong> יש לבחור: <strong>מהותיות בלבד</strong>.</li>
-          <li>בשדה <strong>ממס׳ עמודים</strong> יש להזין: <strong>2</strong>.</li>
-          <li>בשדה <strong>מדור</strong> יש לבחור מהרשימה: <strong>פלילי</strong>.</li>
-          <li>לבסוף יש ללחוץ על כפתור <strong>חיפוש</strong>.</li>
+          <li>כניסה למסך החיפוש המתקדם של בית המשפט העליון.</li>
+          <li>הזנת הטווח: <strong>שבוע אחרון</strong>.</li>
+          <li>בחירת ערך: <strong>מהותיות בלבד</strong>.</li>
+          <li>הזנת <strong>2</strong> בשדה מספר עמודים מינימלי.</li>
+          <li>בחירת מדור: <strong>פלילי</strong> ושליחת החיפוש.</li>
         </ol>
       </section>
     </main>
 
     <script>
-      const SUPREME_COURT_SEARCH_URL = "https://supreme.court.gov.il/Pages/fullsearch.aspx";
+      const AUTOMATED_SEARCH_URL = "/autoSupremeSearch";
       const openSearchButton = document.getElementById("open-search");
-      const manualNote = document.getElementById("manual-note");
 
       openSearchButton.addEventListener("click", () => {
-        window.open(SUPREME_COURT_SEARCH_URL, "_blank", "noopener,noreferrer");
-        manualNote.hidden = false;
+        window.open(AUTOMATED_SEARCH_URL, "_blank", "noopener,noreferrer");
       });
     </script>
   </body>
