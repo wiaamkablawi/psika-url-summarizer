@@ -111,11 +111,29 @@
     </main>
 
     <script>
-      const AUTOMATED_SEARCH_URL = "/autoSupremeSearch";
+      const AUTOMATED_SEARCH_PATH = "/autoSupremeSearch";
       const openSearchButton = document.getElementById("open-search");
 
+      function resolveAutomatedSearchUrl() {
+        const host = window.location.hostname.toLowerCase();
+        const webAppSuffix = ".web.app";
+        const firebaseAppSuffix = ".firebaseapp.com";
+
+        if (host.endsWith(webAppSuffix)) {
+          const projectId = host.slice(0, -webAppSuffix.length);
+          return `https://us-central1-${projectId}.cloudfunctions.net/autoSupremeSearch`;
+        }
+
+        if (host.endsWith(firebaseAppSuffix)) {
+          const projectId = host.slice(0, -firebaseAppSuffix.length);
+          return `https://us-central1-${projectId}.cloudfunctions.net/autoSupremeSearch`;
+        }
+
+        return AUTOMATED_SEARCH_PATH;
+      }
+
       openSearchButton.addEventListener("click", () => {
-        window.open(AUTOMATED_SEARCH_URL, "_blank", "noopener,noreferrer");
+        window.open(resolveAutomatedSearchUrl(), "_blank", "noopener,noreferrer");
       });
     </script>
   </body>
