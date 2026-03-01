@@ -11,20 +11,6 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
-    ],
-    "rewrites": [
-      {
-        "source": "/createSummaryFromUrl",
-        "function": "createSummaryFromUrl"
-      },
-      {
-        "source": "/searchSupremeLastWeekDecisions",
-        "function": "searchSupremeLastWeekDecisions"
-      },
-      {
-        "source": "/listLatestSummaries",
-        "function": "listLatestSummaries"
-      }
     ]
   }
 }
