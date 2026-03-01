@@ -4,12 +4,68 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>psika-url-summarizer</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: "Segoe UI", Arial, sans-serif;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #f4f6fb;
+      }
+
+      main {
+        width: min(90vw, 560px);
+        background: #ffffff;
+        border-radius: 14px;
+        box-shadow: 0 12px 28px rgba(26, 39, 90, 0.14);
+        padding: 2rem;
+        text-align: center;
+      }
+
+      h1 {
+        margin-top: 0;
+      }
+
+      p {
+        color: #334155;
+      }
+
+      button {
+        margin-top: 1rem;
+        border: 0;
+        border-radius: 10px;
+        background: #1d4ed8;
+        color: white;
+        font-size: 1rem;
+        font-weight: 600;
+        padding: 0.85rem 1.25rem;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #1e40af;
+      }
+    </style>
   </head>
   <body>
     <main>
-      <h1>Firebase scaffold ready</h1>
-      <p>הפרויקט אופס ונשארה תשתית בלבד (Firebase + GitHub).</p>
-      <p>אפשר להתחיל בנייה מחדש מכאן.</p>
+      <h1>צעד ראשון</h1>
+      <p>לחיצה על הכפתור תפתח לשונית חדשה ותעבור לאתר החיפוש של בית המשפט העליון.</p>
+      <button id="open-search">פתח Chrome לאתר</button>
     </main>
+
+    <script>
+      const SUPREME_COURT_SEARCH_URL = "https://supreme.court.gov.il/Pages/fullsearch.aspx";
+      const openSearchButton = document.getElementById("open-search");
+
+      openSearchButton.addEventListener("click", () => {
+        window.open(SUPREME_COURT_SEARCH_URL, "_blank", "noopener,noreferrer");
+      });
+    </script>
   </body>
 </html>
