@@ -98,6 +98,7 @@
       <div class="actions">
         <button id="open-search">הפעל את הסוכן</button>
       </div>
+      <p id="agent-status" class="note" hidden></p>
 
       <section aria-label="סטטוס אוטומציה">
         <h2>מה המערכת מבצעת אוטומטית</h2>
@@ -113,10 +114,43 @@
 
     <script>
       const AUTOMATED_SEARCH_PATH = "/autoSupremeSearchAgent";
+      const FALLBACK_SEARCH_URL = "https://supreme.court.gov.il/Pages/fullsearch.aspx";
       const openSearchButton = document.getElementById("open-search");
+      const agentStatus = document.getElementById("agent-status");
 
-      openSearchButton.addEventListener("click", () => {
-        window.open(AUTOMATED_SEARCH_PATH, "_blank", "noopener,noreferrer");
+      function showStatus(message) {
+        agentStatus.textContent = message;
+        agentStatus.hidden = false;
+      }
+
+      async function canReachAgent() {
+        try {
+          const response = await fetch(AUTOMATED_SEARCH_PATH, {
+            method: "GET",
+            cache: "no-store",
+            credentials: "same-origin",
+          });
+          return response.ok;
+        } catch {
+          return false;
+        }
+      }
+
+      openSearchButton.addEventListener("click", async () => {
+        openSearchButton.disabled = true;
+        showStatus("בודק שהסוכן זמין...");
+
+        const agentAvailable = await canReachAgent();
+        openSearchButton.disabled = false;
+
+        if (agentAvailable) {
+          showStatus("הסוכן זמין — פותח כעת חלון חדש.");
+          window.open(AUTOMATED_SEARCH_PATH, "_blank", "noopener,noreferrer");
+          return;
+        }
+
+        showStatus("הסוכן לא זמין כרגע (404/שגיאת שרת). פותח את עמוד החיפוש הרגיל במקום זאת.");
+        window.open(FALLBACK_SEARCH_URL, "_blank", "noopener,noreferrer");
       });
     </script>
   </body>
