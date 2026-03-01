@@ -90,29 +90,29 @@
   </head>
   <body>
     <main>
-      <h1>חיפוש מתקדם - בית המשפט העליון</h1>
+      <h1>סוכן חיפוש פשוט</h1>
       <p>
-        לחיצה על הכפתור תפתח לשונית חדשה עם תוצאות חיפוש אוטומטי (ללא הזנה ידנית של שדות).
+        לוחצים על הכפתור, והסוכן פותח עמוד חדש, ממלא את השדות ולוחץ חיפוש אוטומטית.
       </p>
 
       <div class="actions">
-        <button id="open-search">הפעל חיפוש אוטומטי</button>
+        <button id="open-search">הפעל את הסוכן</button>
       </div>
 
       <section aria-label="סטטוס אוטומציה">
         <h2>מה המערכת מבצעת אוטומטית</h2>
         <ol>
-          <li>כניסה למסך החיפוש המתקדם של בית המשפט העליון.</li>
-          <li>הזנת הטווח: <strong>שבוע אחרון</strong>.</li>
-          <li>בחירת ערך: <strong>מהותיות בלבד</strong>.</li>
-          <li>הזנת <strong>2</strong> בשדה מספר עמודים מינימלי.</li>
-          <li>בחירת מדור: <strong>פלילי</strong> ושליחת החיפוש.</li>
+          <li>פותח את מסך החיפוש של בית המשפט העליון.</li>
+          <li>מגדיר תאריך משבוע אחרון ועד היום.</li>
+          <li>מסמן: <strong>מהותיות בלבד</strong>.</li>
+          <li>מגדיר מינימום <strong>2</strong> עמודים.</li>
+          <li>בוחר מדור <strong>פלילי</strong> ולוחץ חיפוש.</li>
         </ol>
       </section>
     </main>
 
     <script>
-      const AUTOMATED_SEARCH_PATH = "/autoSupremeSearch";
+      const AUTOMATED_SEARCH_PATH = "/autoSupremeSearchAgent";
       const openSearchButton = document.getElementById("open-search");
 
       function resolveAutomatedSearchUrl() {
@@ -122,12 +122,12 @@
 
         if (host.endsWith(webAppSuffix)) {
           const projectId = host.slice(0, -webAppSuffix.length);
-          return `https://us-central1-${projectId}.cloudfunctions.net/autoSupremeSearch`;
+          return `https://us-central1-${projectId}.cloudfunctions.net/autoSupremeSearchAgent`;
         }
 
         if (host.endsWith(firebaseAppSuffix)) {
           const projectId = host.slice(0, -firebaseAppSuffix.length);
-          return `https://us-central1-${projectId}.cloudfunctions.net/autoSupremeSearch`;
+          return `https://us-central1-${projectId}.cloudfunctions.net/autoSupremeSearchAgent`;
         }
 
         return AUTOMATED_SEARCH_PATH;
