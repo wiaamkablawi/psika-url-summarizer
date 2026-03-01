@@ -7,6 +7,12 @@
   },
   "hosting": {
     "public": "public",
+    "rewrites": [
+      {
+        "source": "/autoSupremeSearch",
+        "function": "autoSupremeSearch"
+      }
+    ],
     "ignore": [
       "firebase.json",
       "**/.*",
