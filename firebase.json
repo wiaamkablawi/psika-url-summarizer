@@ -13,6 +13,10 @@
         "function": "autoSupremeSearch"
       },
       {
+        "source": "/autoSupremeSearchAgent",
+        "function": "autoSupremeSearchAgent"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
