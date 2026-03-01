@@ -115,26 +115,8 @@
       const AUTOMATED_SEARCH_PATH = "/autoSupremeSearchAgent";
       const openSearchButton = document.getElementById("open-search");
 
-      function resolveAutomatedSearchUrl() {
-        const host = window.location.hostname.toLowerCase();
-        const webAppSuffix = ".web.app";
-        const firebaseAppSuffix = ".firebaseapp.com";
-
-        if (host.endsWith(webAppSuffix)) {
-          const projectId = host.slice(0, -webAppSuffix.length);
-          return `https://us-central1-${projectId}.cloudfunctions.net/autoSupremeSearchAgent`;
-        }
-
-        if (host.endsWith(firebaseAppSuffix)) {
-          const projectId = host.slice(0, -firebaseAppSuffix.length);
-          return `https://us-central1-${projectId}.cloudfunctions.net/autoSupremeSearchAgent`;
-        }
-
-        return AUTOMATED_SEARCH_PATH;
-      }
-
       openSearchButton.addEventListener("click", () => {
-        window.open(resolveAutomatedSearchUrl(), "_blank", "noopener,noreferrer");
+        window.open(AUTOMATED_SEARCH_PATH, "_blank", "noopener,noreferrer");
       });
     </script>
   </body>
