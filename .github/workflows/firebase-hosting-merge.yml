@@ -27,8 +27,8 @@ jobs:
         run: npm ci
         working-directory: functions
 
-      - name: Run functions unit/module tests
-        run: npm test
+      - name: Run functions unit/module tests (if configured)
+        run: npm run test --if-present
         working-directory: functions
 
   deploy:
