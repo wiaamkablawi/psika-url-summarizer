@@ -19,24 +19,32 @@
       }
 
       main {
-        width: min(90vw, 560px);
+        width: min(92vw, 700px);
         background: #ffffff;
         border-radius: 14px;
         box-shadow: 0 12px 28px rgba(26, 39, 90, 0.14);
         padding: 2rem;
-        text-align: center;
+        text-align: right;
       }
 
       h1 {
         margin-top: 0;
+        text-align: center;
       }
 
-      p {
+      p,
+      li {
         color: #334155;
+        line-height: 1.55;
+      }
+
+      .actions {
+        display: flex;
+        justify-content: center;
+        margin: 1rem 0 1.5rem;
       }
 
       button {
-        margin-top: 1rem;
         border: 0;
         border-radius: 10px;
         background: #1d4ed8;
@@ -50,21 +58,70 @@
       button:hover {
         background: #1e40af;
       }
+
+      .note {
+        margin: 0.75rem 0 0;
+        font-size: 0.95rem;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        color: #1e3a8a;
+        border-radius: 10px;
+        padding: 0.75rem;
+      }
+
+      section {
+        margin-top: 1rem;
+        border-top: 1px solid #e2e8f0;
+        padding-top: 1rem;
+      }
+
+      h2 {
+        margin: 0 0 0.75rem;
+        color: #0f172a;
+        font-size: 1.2rem;
+      }
+
+      ol {
+        margin: 0;
+        padding-inline-start: 1.25rem;
+      }
     </style>
   </head>
   <body>
     <main>
-      <h1>צעד ראשון</h1>
-      <p>לחיצה על הכפתור תפתח לשונית חדשה ותעבור לאתר החיפוש של בית המשפט העליון.</p>
-      <button id="open-search">פתח Chrome לאתר</button>
+      <h1>חיפוש מתקדם - בית המשפט העליון</h1>
+      <p>
+        לחיצה על הכפתור תפתח לשונית חדשה ותעבור לאתר החיפוש של בית המשפט העליון.
+      </p>
+
+      <div class="actions">
+        <button id="open-search">פתח Chrome לאתר</button>
+      </div>
+
+      <p class="note" id="manual-note" hidden>
+        חשוב: הקוד פותח את מסך החיפוש בלבד. את בחירת השדות ולחיצה על "חיפוש" מבצעים ידנית במסך שנפתח.
+      </p>
+
+      <section aria-label="צעד 2">
+        <h2>צעד 2 - מה למלא במסך החיפוש שנפתח</h2>
+        <ol>
+          <li>ברשימה הנפתחת של תאריך המסמך יש לבחור: <strong>שבוע אחרון</strong>.</li>
+          <li>בשדה <strong>מהותי / טכני</strong> יש לבחור: <strong>מהותיות בלבד</strong>.</li>
+          <li>בשדה <strong>ממס׳ עמודים</strong> יש להזין: <strong>2</strong>.</li>
+          <li>בשדה <strong>מדור</strong> יש לבחור מהרשימה: <strong>פלילי</strong>.</li>
+          <li>לבסוף יש ללחוץ על כפתור <strong>חיפוש</strong>.</li>
+        </ol>
+      </section>
     </main>
 
     <script>
       const SUPREME_COURT_SEARCH_URL = "https://supreme.court.gov.il/Pages/fullsearch.aspx";
       const openSearchButton = document.getElementById("open-search");
+      const manualNote = document.getElementById("manual-note");
 
       openSearchButton.addEventListener("click", () => {
         window.open(SUPREME_COURT_SEARCH_URL, "_blank", "noopener,noreferrer");
+        manualNote.hidden = false;
       });
     </script>
   </body>
